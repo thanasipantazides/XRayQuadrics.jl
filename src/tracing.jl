@@ -1,3 +1,38 @@
+using XRayTrace
+
+"""
+    inout(p::Particle, q::Quadric)
+
+Computes entry and exit times for a `Particle` passing through a `Quadric` surface.
+"""
+function inout(p::Particle, q::Quadric)
+    # Project to homogeneous coordinate
+    rh = [p.r0;1]   # AN ISSUE WITH THIS: if r = r0 + vΔt, and r0 and v have 1 as their homogenous coord, get (1 + Δt) as the          homogeneous coord for r. FIX
+    vh = [p.v;0]    # REMOVE TIME TERM IN HOMEOGENEOUS COORDS?
+
+    Q = q.Q
+    # check for coplanar/axial alignment
+    denom = vh'*Q*vh
+    if denom == 0.0
+        return (0,0)
+    end
+
+    post = (sqrt(Complex((vh'*Q*rh)^2 - (vh'*Q*vh)*(rh'*Q*rh))))/denom
+    pred = (-vh'*Q*rh)/denom
+
+    if imag(post) == 0
+        post = real(post)
+        # sort roots in ascending order
+        return extrema([pred - post, pred + post])
+    else
+        # imaginary component implies no intersection
+        return (0,0)
+    end
+end
+
+
+
+
 """
     cylinderentryexit(particle, cylinder)
 

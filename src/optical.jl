@@ -19,7 +19,8 @@ struct PixelatedAttenuator
     density     # in kg/m^3
     toppoint    # a point (x,y,z) on the one side of the attenuator (in m)
     bottompoint # a point on the other side of the attenuator
-    normal      # normal vector to attenuator surface    massattenuation # table of mass attenuation coefficients per energy
+    normal      # normal vector to attenuator surface    
+    massattenuation # table of mass attenuation coefficients per energy
 end
 
 struct Mirror
