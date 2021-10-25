@@ -14,7 +14,18 @@ function inout(p::Particle, q::Quadric)
     # check for coplanar/axial alignment
     denom = vh'*Q*vh
     if denom == 0.0
-        return (0,0)
+        if all(Q[1:3, 1:3] .== 0)
+            # a plane
+            Qd = 2*Q[1:3,end]
+            if Qd'*p.v == 0
+                return (0,0)
+            else
+                return (0, (-Qd'*p.r0 - Q[end])/(Qd'*p.v))
+            end
+        else
+            # colinear with nondegenerate quadric axis
+            return (0,0)
+        end
     end
 
     post = (sqrt(Complex((vh'*Q*rh)^2 - (vh'*Q*vh)*(rh'*Q*rh))))/denom

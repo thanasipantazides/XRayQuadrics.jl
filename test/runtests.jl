@@ -2,7 +2,7 @@ using XRayTrace
 using LinearAlgebra
 using Test
 
-s = Plane([0;0;0],[1;1;1])
+s = Plane([0;0;1],[1;1;1])
 qs = Quadric(s)
 tqs = changerepresentation(qs)
 
@@ -18,7 +18,7 @@ p = Paraboloid(3, [3;3;3], [0;0;1])
 qp = Quadric(p)
 tqp = changerepresentation(qp)
 
-ray = Particle([0;0;10],[0;0;-1],10e3)
+sray = Particle([0;0;0],[1;1;1],10e3)
 
 @testset "XRayTrace.jl" begin
     # Write your tests here.
@@ -35,7 +35,7 @@ ray = Particle([0;0;10],[0;0;-1],10e3)
         @test s.a'*(tqs.c - s.c) < ε        # computed center and original center are coplanar
         @test c.a'*(tqc.c - c.c) - 1 < ε    # computed and true centers lie on axis
         @test p.a'*(tqp.c - p.c) - 1 < ε
-        @test h.a'*(tqh.c - h.c) - 1 < ε    # computed and true centers lie on axis
+        @test h.a'*(tqh.c - h.c) - 1 < ε
     end
 
     @testset "radius tests" begin
@@ -46,5 +46,11 @@ ray = Particle([0;0;10],[0;0;-1],10e3)
 
     @testset "hyperboloid tests" begin      # computed hyperbolic coeff and original coeff are same
         @test tqh.b - h.b < ε
+    end
+
+    @testset "intersections" begin
+        @test all(inout(sray, qs) .== (0,(s.a'*s.c - s.a'*sray.r0)/(s.a'*sray.v)))
+        cray = Particle(c.c, [0;0;1], 10e3)
+        @test all(inout(cray, qc) .== (-c.R, c.R))
     end
 end

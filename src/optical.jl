@@ -1,8 +1,15 @@
 
 struct Particle
-    r0  # initial position
-    v   # propagation direction (unit)
-    E   # energy
+    r0::Vector{Float64}     # initial position
+    v::Vector{Float64}      # propagation direction (unit)
+    E::Float64              # energy
+    Particle(r0,v,E) = begin
+        if length(r0) != 3 || length(v) != 3
+            error("3-vectors please")
+        else
+            new(r0,v/norm(v),E)
+        end
+    end
 end
 
 struct Attenuator   # UNUSED

@@ -12,7 +12,7 @@ using Plots
 import SpecialFunctions
 
 export Particle, PixelatedAttenuator
-export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, classify, changerepresentation
+export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, classify, changerepresentation
 export inout, batchphotons, transmissionprobability, absorptionprobability, lengthsinattenuator, cylinderentryexit
 
 include("quadrics.jl")

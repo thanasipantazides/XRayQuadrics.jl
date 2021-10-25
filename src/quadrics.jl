@@ -18,21 +18,20 @@ struct Cylinder
     a::Vector{Float64}  # axis (unit) (NOTE: c + h*a yields a point on the opposite cap => this is an inward normal axis)
     Cylinder(R,c,a) = begin
         if length(c) != 3 || length(a) != 3
-            error("out of order")
+            error("3-vectors please")
         else
             new(R,c,a/norm(a))
         end
     end
 end
 
-# NEED SOME WAY TO DISPLACE THESE FROM c: h1 and h2?
 struct Paraboloid
     R::Real
     c::Vector{Float64}
     a::Vector{Float64}
     Paraboloid(R,c,a) = begin
         if length(c) != 3 || length(a) != 3
-            error("out of order")
+            error("3-vectors please")
         else
             new(R,c,a/norm(a))
         end
@@ -46,7 +45,7 @@ struct Hyperboloid
     a::Vector{Float64}
     Hyperboloid(R,b,c,a) = begin
         if length(c) != 3 || length(a) != 3
-            error("out of order")
+            error("3-vectors please")
         else
             new(R,b,c,a/norm(a))
         end
@@ -58,8 +57,19 @@ struct Quadric
 end
 
 struct TruncatedQuadric
-    Q::Quadric
-    P::Vector{Plane}
+    q::Quadric
+    p::Vector{Plane}
+    TruncatedQuadric(q,p) = begin
+        Qh = q.Q[1:3,1:3]
+        if all(eigvals(Qh) .!= 0)
+            for plane in p
+                if all(q.Q[1:3,1:3]*plane.a .== 0)
+                    error("planes must be oblique to quadric axis")
+                end
+            end
+        end
+        new(q,p)
+    end
 end
 
 # quadric constructors
@@ -67,10 +77,6 @@ function Quadric(Q::Matrix{Real})
     # do some definiteness checks or something
     return Quadric(Q)
 end
-
-# function TruncatedQuadric(Q::Quadric, P::Vector{Plane})
-
-# end
 
 function Quadric(s::Plane)
     Q = [zeros(3,3)      0.5*s.a;
@@ -95,6 +101,18 @@ function Quadric(s::Hyperboloid)
     Q = [γ*s.a*s.a' - I     (I - γ*s.a*s.a')*s.c;
          ((I - γ*s.a*s.a')*s.c)'  s.R^2 + s.c'*(γ*s.a*s.a' - I)*s.c]
     return Quadric(Q)
+end
+
+function TruncatedQuadric(s::Plane, p::Vector{Plane})
+    return TruncatedQuadric(Quadric(s), p)
+end
+
+function TruncatedQuadric(s::Cylinder, p::Vector{Plane})
+    return TruncatedQuadric(Quadric(s), p)
+end
+
+function TruncatedQuadric(s::Hyperboloid, p::Vector{Plane})
+    return TruncatedQuadric(Quadric(s), p)
 end
 
 function changerepresentation(q::Quadric)
