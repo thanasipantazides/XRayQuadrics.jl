@@ -41,9 +41,6 @@ function inout(p::Particle, q::Quadric)
     end
 end
 
-
-
-
 """
     cylinderentryexit(particle, cylinder)
 

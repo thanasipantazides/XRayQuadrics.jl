@@ -105,12 +105,6 @@ struct TruncatedQuadric
     end
 end
 
-# # quadric constructors
-# function Quadric(Q::Matrix{Real})
-#     # do some definiteness checks or something
-#     return Quadric(Q)
-# end
-
 function Quadric(s::Plane)
     Q = [zeros(3,3)      0.5*s.a;
          0.5*s.a'        -s.a'*s.c]
@@ -171,26 +165,23 @@ function changerepresentation(q::Quadric)
     E = eigvals(Qh)
     if all(E .== 0)
         # plane
-        a = 2*Qd                        # Qh is zero, Qd is parallel to plane normal
-        # a = a/norm(a)                   
-        c = -Q0*a                       # Q0 = -a'*c: choose c to lie on a (free choice)
+        a = 2*Qd                    # Qh is zero, Qd is parallel to plane normal
+        c = -Q0*a                   # Q0 = -a'*c: choose c to lie on a (free choice)
         return Plane(c, a)
         
     elseif all(abs.(E) .>= ε)
         # hyperboloid
         v = eigvecs(Qh)
-        a = v[:,end]                    # axis is eigenvector for largest eigenvalue
-        # a = a/norm(a)
-        c = (-Qh)\Qd                 # center of hyperboloid
-        γ = tr(Qh + I)               # Qh = γ*a*a' - I, and trace(a*a') == 1
-        R = sqrt(Q0 - c'*Qh*c)  # Q0 = sum(c*c' .* Qh) + R^2
-        b = 1/sqrt(γ - 1)*R             # γ = 1 + (R/b)^2
+        a = v[:,end]                # axis is eigenvector for largest eigenvalue
+        c = (-Qh)\Qd                # center of hyperboloid
+        γ = tr(Qh + I)              # Qh = γ*a*a' - I, and trace(a*a') == 1
+        R = sqrt(Q0 - c'*Qh*c)      # Q0 = sum(c*c' .* Qh) + R^2
+        b = 1/sqrt(γ - 1)*R         # γ = 1 + (R/b)^2
         return Hyperboloid(R, b, c, a)
 
     else
         v = eigvecs(Qh)
         a = v[:,end]        # axis is eigenvector for largest eigenvalue
-        # a = a/norm(a)
 
         if rank(q.Q) == 4
             # paraboloid
@@ -202,6 +193,7 @@ function changerepresentation(q::Quadric)
                 c[badI] = 1.0
             end
             return Paraboloid(R, c, a)
+ 
         elseif rank(q.Q) == 3
             # cylinder
             c = (-Qh)\Qd
@@ -211,8 +203,10 @@ function changerepresentation(q::Quadric)
             end
             R = sqrt(Q0 - c'*Qh*c)
             return Cylinder(R, c, a)
+ 
         else
             error("unclassified shape")
+            
         end
     end
 end
@@ -221,6 +215,25 @@ changerepresentation(s::Plane) = Quadric(s)
 changerepresentation(s::Cylinder) = Quadric(s)
 changerepresentation(s::Paraboloid) = Quadric(s)
 changerepresentation(s::Hyperboloid) = Quadric(s)
+
+function normal(s::Plane, r::Vector{Float64})
+    return s.a
+end
+
+function normal(s::Cylinder, r::Vector{Float64})
+    n = 2*(s.a - (r - s.c)./norm(r - s.c))
+    return n/norm(n)
+end
+
+function normal(s::Paraboloid, r::Vector{Float64})
+    n = s.R^2*s.a + 2*(s.a - (r - s.c)./norm(r - s.c))
+    return n/norm(n)
+end
+
+function normal(s::Cylinder, r::Vector{Float64})
+    n = 2*((1 + s.R^2/s.b^2)*s.a - (r - s.c)./norm(r - s.c))
+    return n/norm(n)
+end
 
 function classify(q::Quadric)
 

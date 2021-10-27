@@ -12,7 +12,7 @@ using GLMakie, Colors
 import SpecialFunctions
 
 export Particle, PixelatedAttenuator
-export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, classify, changerepresentation
+export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, classify, normal, changerepresentation
 export inout, batchphotons, transmissionprobability, absorptionprobability, lengthsinattenuator, cylinderentryexit
 export PlotTruncatedQuadric, convert_arguments, cartesian_grid, get_mesh, plot, plot!
 
