@@ -1,17 +1,27 @@
 using LinearAlgebra
 
+"""
+    Plane(c::Vector{Float64}, a::Vector{Float64})
+
+Construct a `Plane` from a point `c` which lies in the plane and a unit normal `a`. Currently, `c` and `a` are forced to be 3-vectors.
+"""
 struct Plane
     c::Vector{Float64}
     a::Vector{Float64}
     Plane(c,a) = begin
         if length(c) != 3 || length(a) != 3
-            error("out of order")
+            error("3-vectors please")
         else
             new(c,a/norm(a))
         end
     end
 end
 
+"""
+    Cylinder(R::Float64, c::Vector{Float64}, a::Vector{Float64})
+
+Construct a `Cylinder` with radius `R` and unit axis `a` which passes through point `c`.
+"""
 struct Cylinder
     R::Real          # radius
     c::Vector{Float64}  # center point
@@ -25,6 +35,11 @@ struct Cylinder
     end
 end
 
+"""
+    Paraboloid(R::Float64, c::Vector{Float64}, a::Vector{Float64})
+
+Construct a `Paraboloid` at vertex `c` with growth rate `R` and unit axis `a`.
+"""
 struct Paraboloid
     R::Real
     c::Vector{Float64}
@@ -38,6 +53,11 @@ struct Paraboloid
     end
 end
 
+"""
+    Hyperboloid(R::Float64, b::Float64, c::Vector{Float64}, a::Vector{Float64})
+
+Construct a `Hyperboloid` of one sheet centered at `c` with minimum radius `R`, radial growth rate `b`, and unit axis `a`.
+"""
 struct Hyperboloid
     R::Real
     b::Real
@@ -52,10 +72,23 @@ struct Hyperboloid
     end
 end
 
+
 struct Quadric
     Q::Matrix{Float64}
+    Quadric(Q) = begin
+        if issymmetric(Q)
+            new(Q)
+        else
+            error("quadric matrix must be symmetric")
+        end
+    end
 end
 
+"""
+    TruncatedQuadric(q::Quadric, p::Vector{Plane})
+
+Construct a `TruncatedQuadric` surface by slicing a non-degenerate `Quadric` q by two planes `p`. Planes may not contain quadric axis.
+"""
 struct TruncatedQuadric
     q::Quadric
     p::Vector{Plane}
@@ -72,11 +105,11 @@ struct TruncatedQuadric
     end
 end
 
-# quadric constructors
-function Quadric(Q::Matrix{Real})
-    # do some definiteness checks or something
-    return Quadric(Q)
-end
+# # quadric constructors
+# function Quadric(Q::Matrix{Real})
+#     # do some definiteness checks or something
+#     return Quadric(Q)
+# end
 
 function Quadric(s::Plane)
     Q = [zeros(3,3)      0.5*s.a;
@@ -103,19 +136,35 @@ function Quadric(s::Hyperboloid)
     return Quadric(Q)
 end
 
-function TruncatedQuadric(s::Plane, p::Vector{Plane})
-    return TruncatedQuadric(Quadric(s), p)
-end
+TruncatedQuadric(s::Plane, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p) 
+TruncatedQuadric(s::Cylinder, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
+TruncatedQuadric(s::Paraboloid, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
+TruncatedQuadric(s::Hyperboloid, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
 
-function TruncatedQuadric(s::Cylinder, p::Vector{Plane})
-    return TruncatedQuadric(Quadric(s), p)
-end
+"""
+    TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64})
 
-function TruncatedQuadric(s::Hyperboloid, p::Vector{Plane})
-    return TruncatedQuadric(Quadric(s), p)
+A convenience constructor for a `TruncatedQuadric`. Specify `h1` and `h2` as points along the axis of `q`, and the constructor will return `q` truncated by planes passing through `h1` and `h2` sharing a normal vector equal to the axis of `q`.
+"""
+function TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64})
+    s = changerepresentation(q)
+    if typeof(s) == Plane
+        display("TruncatedQuadric just a bunch of planes")
+    end
+    
+    if all((h1 - h2)/norm(h1 - h2) .== s.a/norm(s.a))
+        p1 = Plane(h1, s.a)
+        p2 = Plane(h2, s.a)
+    else
+        error("h1, h2 must lie on Quadric axis")
+    end
+
+    return TruncatedQuadric(q, [p1, p2])
 end
 
 function changerepresentation(q::Quadric)
+    ε = 1e-15
+
     Qh = q.Q[1:3, 1:3]
     Qd = q.Q[1:3, end]
     Q0 = q.Q[end, end]
@@ -127,7 +176,7 @@ function changerepresentation(q::Quadric)
         c = -Q0*a                       # Q0 = -a'*c: choose c to lie on a (free choice)
         return Plane(c, a)
         
-    elseif all(E .!= 0)
+    elseif all(abs.(E) .>= ε)
         # hyperboloid
         v = eigvecs(Qh)
         a = v[:,end]                    # axis is eigenvector for largest eigenvalue
@@ -149,13 +198,17 @@ function changerepresentation(q::Quadric)
             R = sqrt(2*Qd'*a)
             c = (-Qh)\(Qd - R^2/2*a)
             badI = findfirst(isnan.(c) .| isinf.(c))
-            c[badI] = 1.0
+            if !isnothing(badI)
+                c[badI] = 1.0
+            end
             return Paraboloid(R, c, a)
         elseif rank(q.Q) == 3
             # cylinder
             c = (-Qh)\Qd
             badI = findfirst(isnan.(c) .| isinf.(c))
-            c[badI] = 1.0
+            if !isnothing(badI)
+                c[badI] = 1.0
+            end
             R = sqrt(Q0 - c'*Qh*c)
             return Cylinder(R, c, a)
         else
@@ -164,21 +217,10 @@ function changerepresentation(q::Quadric)
     end
 end
 
-function changerepresentation(s::Plane)
-    return Quadric(s)
-end
-
-function changerepresentation(s::Cylinder)
-    return Quadric(s)
-end
-
-function changerepresentation(s::Paraboloid)
-    return Quadric(s)
-end
-
-function changerepresentation(s::Hyperboloid)
-    return Quadric(s)
-end
+changerepresentation(s::Plane) = Quadric(s)
+changerepresentation(s::Cylinder) = Quadric(s)
+changerepresentation(s::Paraboloid) = Quadric(s)
+changerepresentation(s::Hyperboloid) = Quadric(s)
 
 function classify(q::Quadric)
 
