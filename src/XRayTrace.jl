@@ -1,4 +1,4 @@
-__precompile__()
+# __precompile__()
 module XRayTrace
 
 using Distributed, DistributedArrays
@@ -7,16 +7,18 @@ using Distributed, DistributedArrays
 using LinearAlgebra
 using Random
 import JSON, CSV, DataFrames
-using Plots
+using GLMakie, Colors
 # using ArbNumerics
 import SpecialFunctions
 
 export Particle, PixelatedAttenuator
 export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, classify, changerepresentation
 export inout, batchphotons, transmissionprobability, absorptionprobability, lengthsinattenuator, cylinderentryexit
+export PlotTruncatedQuadric, convert_arguments, cartesian_grid, get_mesh, plot, plot!
 
 include("quadrics.jl")
 include("optical.jl")
 include("tracing.jl")
+include("plotting.jl")
 
 end
