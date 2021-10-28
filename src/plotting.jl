@@ -1,5 +1,6 @@
 using XRayTrace
 using GLMakie, Colors
+using Plots
 
 # macro expands to:
 #   const PlotTQ{ArgTypes} = Combined{plottq, ArgTypes}
@@ -47,6 +48,31 @@ function Makie.plot!(plot::PlotTQ{<:Tuple{TruncatedQuadric}})
     return plot
 end
 
+Plots.@recipe function f(tq::TruncatedQuadric; plot_caps = false)
+    # color       --> :blue
+    alpha       --> 0.667
+    seriestype  :=  :surface
+    # markershape --> (add_marker ? :circle : :none)
+    delete!(plotattributes, :add_marker)
+    (X, Y, Z) = cartesian_grid(tq)
+    @series begin
+        seriestype := :surface
+        X[1], Y[1], Z[1]
+    end
+    # if plot_caps
+        @series begin
+            seriestype := :surface
+            X[2], Y[2], Z[2]
+        end
+        @series begin
+            seriestype := :surface
+            X[3], Y[3], Z[3]
+        end
+    # end
+end
+
+
+
 
 
 function cartesian_grid(tq::TruncatedQuadric)
@@ -75,7 +101,7 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
 
     R = s.R
     a = s.a
-    c = ca1
+    c = s.c
     θ = range(0, stop=2π, length=nθ)
     # ζ = range(0, stop=h, length=nζ)
     ζ = range(h1, stop=h2, length=nζ)
@@ -120,8 +146,8 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
 
     # print(typeof(s))
     (X, Y, Z) = transform_to_axis(X, Y, Z, [0;0;1], a, c)
-    (Xc1, Yc1, Zc1) = transform_to_axis(Xc1, Yc1, Zc1, [0;0;1], a, ca1)
-    (Xc2, Yc2, Zc2) = transform_to_axis(Xc2, Yc2, Zc2, [0;0;1], a, ca2)
+    (Xc1, Yc1, Zc1) = transform_to_axis(Xc1, Yc1, Zc1, [0;0;1], ps[1].a, c + ca1)   # FIX THESE: WRONG MESH POSITION
+    (Xc2, Yc2, Zc2) = transform_to_axis(Xc2, Yc2, Zc2, [0;0;1], ps[2].a, c + ca2)
 
     return ((X,Xc1,Xc2), (Y,Yc1,Yc2), (Z,Zc1,Zc2))
 end

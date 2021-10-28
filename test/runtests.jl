@@ -24,27 +24,27 @@ sray = Particle([0;0;0],[1;1;1],10e3)
     # Write your tests here.
     # test boolean expressions with @test
     ε = 1e-15
-    @testset "axis tests" begin
+    @testset "axis conversion" begin
         @test norm(tqs.a'*s.a) - 1 < ε      # computed axis and original axis are parallel or antiparallel
         @test norm(tqc.a'*c.a) - 1 < ε
         @test norm(tqh.a'*h.a) - 1 < ε
         @test norm(tqp.a'*p.a) - 1 < ε
     end
 
-    @testset "center tests" begin
+    @testset "center conversion" begin
         @test s.a'*(tqs.c - s.c) < ε        # computed center and original center are coplanar
         @test c.a'*(tqc.c - c.c) - 1 < ε    # computed and true centers lie on axis
         @test p.a'*(tqp.c - p.c) - 1 < ε
         @test h.a'*(tqh.c - h.c) - 1 < ε
     end
 
-    @testset "radius tests" begin
+    @testset "radius conversion" begin
         @test tqc.R - c.R < ε               # computed radius and original radius are same
         @test tqh.R - h.R < ε
         @test tqp.R - p.R < ε
     end
 
-    @testset "hyperboloid tests" begin      # computed hyperbolic coeff and original coeff are same
+    @testset "hyperboloid conversion" begin      # computed hyperbolic coeff and original coeff are same
         @test tqh.b - h.b < ε
     end
 
@@ -52,5 +52,9 @@ sray = Particle([0;0;0],[1;1;1],10e3)
         @test all(inout(sray, qs) .== (0,(s.a'*s.c - s.a'*sray.r0)/(s.a'*sray.v)))
         cray = Particle(c.c, [0;0;1], 10e3)
         @test all(inout(cray, qc) .== (-c.R, c.R))
+    end
+
+    @testset "normal vectors" begin
+        
     end
 end

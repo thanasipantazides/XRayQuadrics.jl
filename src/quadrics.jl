@@ -206,7 +206,7 @@ function changerepresentation(q::Quadric)
  
         else
             error("unclassified shape")
-            
+
         end
     end
 end
@@ -218,6 +218,7 @@ changerepresentation(s::Hyperboloid) = Quadric(s)
 
 function normal(q::Quadric, r::Vector{Float64})
     n = 2*q.Q*[r; 1]
+    n = n[1:3]
     n = n/norm(n)
     return n
 end
@@ -236,7 +237,7 @@ function normal(s::Paraboloid, r::Vector{Float64})
     return n/norm(n)
 end
 
-function normal(s::Cylinder, r::Vector{Float64})
+function normal(s::Hyperboloid, r::Vector{Float64})
     n = 2*((1 + s.R^2/s.b^2)*s.a - (r - s.c)./norm(r - s.c))
     return n/norm(n)
 end

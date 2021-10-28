@@ -7,7 +7,9 @@ using Distributed, DistributedArrays
 using LinearAlgebra
 using Random
 import JSON, CSV, DataFrames
-using GLMakie, Colors
+using Colors
+using GLMakie
+# using Plots
 # using ArbNumerics
 import SpecialFunctions
 
