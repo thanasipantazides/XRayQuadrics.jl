@@ -216,6 +216,12 @@ changerepresentation(s::Cylinder) = Quadric(s)
 changerepresentation(s::Paraboloid) = Quadric(s)
 changerepresentation(s::Hyperboloid) = Quadric(s)
 
+function normal(q::Quadric, r::Vector{Float64})
+    n = 2*q.Q*[r; 1]
+    n = n/norm(n)
+    return n
+end
+
 function normal(s::Plane, r::Vector{Float64})
     return s.a
 end
