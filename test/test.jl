@@ -58,12 +58,13 @@ tqh = TruncatedQuadric(h, [p1, p2])
 # Makie.plot!(tq)
 # s = GLMakie.plot(tqp)
 
-plotlyjs()
-Plots.surface(tqp, color=:blue, plot_cap=true)
-Plots.surface!(tqh, color=:red, alpha=1)
+plotlyjs(reuse=true)
+splot = Plots.surface(tqp, color=:blue, plot_caps=true, size=(1920,1080))
+display(splot)
+Plots.surface!(tqh, color=:red)
 Plots.surface!(tqc, color=:green)
 Plots.plot!([center center+3*ax][1,:], [center center+3*ax][2,:], [center center+3*ax][3,:], color=:blue, linewidth=4)
-current()
+# current()
 
 nray = 1000
 rays = Array{Particle, 1}(undef, nray)
@@ -104,7 +105,7 @@ end
 
 # Plots.scatter!([prays[1,:] prays[1,:]+pnorm[1,:]], [prays[2,:] prays[2,:]+pnorm[2,:]], [prays[3,:] prays[3,:]+pnorm[3,:]], color=:cyan, markersize=0.2)
 
-Plots.scatter!([hrays[1,:] hrays[1,:]+hnorm[1,:]], [hrays[2,:] hrays[2,:]+hnorm[2,:]], [hrays[3,:] hrays[3,:]+hnorm[3,:]], color=:cyan, markersize=0.2)
+Plots.scatter!([hrays[1,:] hrays[1,:]+hnorm[1,:]], [hrays[2,:] hrays[2,:]+hnorm[2,:]], [hrays[3,:] hrays[3,:]+hnorm[3,:]], color=:red, markersize=1)
 
 # Plots.scatter!([crays[1,:] crays[1,:]+cnorm[1,:]], [crays[2,:] crays[2,:]+cnorm[2,:]], [crays[3,:] crays[3,:]+cnorm[3,:]], color=:green, markersize=0.2)
 
@@ -113,3 +114,5 @@ a = 9
 Plots.xlims!((center[1]-a,center[1]+a))
 Plots.ylims!((center[2]-a,center[2]+a))
 Plots.zlims!((center[3]-a,center[3]+a))
+
+display(splot)

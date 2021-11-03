@@ -12,7 +12,7 @@ using Plots
     Makie.Attributes(;
         plot_caps = true,
         color = :red,
-        alpha = 0.667,
+        seriesalpha = 0.667,
         light_source = [0;0;1]
     )
 end
@@ -50,22 +50,26 @@ end
 
 Plots.@recipe function f(tq::TruncatedQuadric; plot_caps = false)
     # color       --> :blue
-    alpha       --> 0.667
+    seriesalpha --> 0.667
     seriestype  :=  :surface
+    legend      --> false
     # markershape --> (add_marker ? :circle : :none)
     delete!(plotattributes, :add_marker)
     (X, Y, Z) = cartesian_grid(tq)
     @series begin
-        seriestype := :surface
+        seriestype  := :surface
+        legend      --> false
         X[1], Y[1], Z[1]
     end
     # if plot_caps
         @series begin
-            seriestype := :surface
+            seriestype  := :surface
+            legend      --> false
             X[2], Y[2], Z[2]
         end
         @series begin
-            seriestype := :surface
+            seriestype  := :surface
+            legend      --> false
             X[3], Y[3], Z[3]
         end
     # end
@@ -147,7 +151,7 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
     # print(typeof(s))
     (X, Y, Z) = transform_to_axis(X, Y, Z, [0;0;1], a, c)
     (Xc1, Yc1, Zc1) = transform_to_axis(Xc1, Yc1, Zc1, [0;0;1], ps[1].a, c + ca1)   # FIX THESE: WRONG MESH POSITION
-    (Xc2, Yc2, Zc2) = transform_to_axis(Xc2, Yc2, Zc2, [0;0;1], ps[2].a, c + ca2)
+    (Xc2, Yc2, Zc2) = transform_to_axis(Xc2, Yc2, Zc2, [0;0;1], ps[2].a, c + ca1)
 
     return ((X,Xc1,Xc2), (Y,Yc1,Yc2), (Z,Zc1,Zc2))
 end
