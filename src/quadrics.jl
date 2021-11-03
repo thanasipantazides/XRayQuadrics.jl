@@ -119,7 +119,7 @@ end
 
 function Quadric(s::Paraboloid)
     Q = [s.a*s.a' - I   s.R^2/2*s.a + (I - s.a*s.a')*s.c;
-         (s.R^2/2*s.a + (I - s.a*s.a')*s.c)'    s.R^2*s.a'*s.c + s.c'*(s.a*s.a' - I)*s.c]
+         (s.R^2/2*s.a + (I - s.a*s.a')*s.c)'    -s.R^2*s.a'*s.c + s.c'*(s.a*s.a' - I)*s.c]
     return Quadric(Q)
 end
 
