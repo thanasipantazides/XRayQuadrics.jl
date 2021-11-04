@@ -93,8 +93,8 @@ struct TruncatedQuadric
     q::Quadric
     p::Vector{Plane}
     TruncatedQuadric(q,p) = begin
-        Qh = q.Q[1:3,1:3]
-        if all(eigvals(Qh) .!= 0)
+        Qr = q.Q[1:3,1:3]
+        if all(eigvals(Qr) .!= 0)
             for plane in p
                 if all(q.Q[1:3,1:3]*plane.a .== 0)
                     error("planes must be oblique to quadric axis")
@@ -159,49 +159,51 @@ end
 function changerepresentation(q::Quadric)
     ε = 1e-15
 
-    Qh = q.Q[1:3, 1:3]
-    Qd = q.Q[1:3, end]
-    Q0 = q.Q[end, end]
-    E = eigvals(Qh)
+    Qr = q.Q[1:3, 1:3]
+    qd = q.Q[1:3, end]
+    q0 = q.Q[end, end]
+    E = eigvals(Qr)
     if all(E .== 0)
         # plane
-        a = 2*Qd                    # Qh is zero, Qd is parallel to plane normal
-        c = -Q0*a                   # Q0 = -a'*c: choose c to lie on a (free choice)
+        a = 2*qd                    # Qr is zero, qd is parallel to plane normal
+        c = -q0*a                   # q0 = -a'*c: choose c to lie on a (free choice)
         return Plane(c, a)
         
     elseif all(abs.(E) .>= ε)
         # hyperboloid
-        v = eigvecs(Qh)
+        v = eigvecs(Qr)
         a = v[:,end]                # axis is eigenvector for largest eigenvalue
-        c = (-Qh)\Qd                # center of hyperboloid
-        γ = tr(Qh + I)              # Qh = γ*a*a' - I, and trace(a*a') == 1
-        R = sqrt(Q0 - c'*Qh*c)      # Q0 = sum(c*c' .* Qh) + R^2
+        c = (-Qr)\qd                # center of hyperboloid
+        γ = tr(Qr + I)              # Qr = γ*a*a' - I, and trace(a*a') == 1
+        R = sqrt(q0 - c'*Qr*c)      # q0 = sum(c*c' .* Qr) + R^2
         b = 1/sqrt(γ - 1)*R         # γ = 1 + (R/b)^2
         return Hyperboloid(R, b, c, a)
 
     else
-        v = eigvecs(Qh)
+        v = eigvecs(Qr)
         a = v[:,end]        # axis is eigenvector for largest eigenvalue
 
         if rank(q.Q) == 4
             # paraboloid
-            a = sign(Qd'*a)*a       # correct for antiparallel axis
-            R = sqrt(2*Qd'*a)
-            c = (-Qh)\(Qd - R^2/2*a)
-            badI = findfirst(isnan.(c) .| isinf.(c))
-            if !isnothing(badI)
-                c[badI] = 1.0
-            end
+            a = sign(qd'*a)*a       # correct for antiparallel axis
+            R = sqrt(2*qd'*a)
+            
+            cb1 = v[:,1]'*qd
+            cb2 = v[:,2]'*qd
+            cb3 = -(q0 + cb1^2 + cb2^2)/R^2
+
+            c = v*[cb1; cb2; cb3]
+
             return Paraboloid(R, c, a)
  
         elseif rank(q.Q) == 3
             # cylinder
-            c = (-Qh)\Qd
+            c = (-Qr)\qd
             badI = findfirst(isnan.(c) .| isinf.(c))
             if !isnothing(badI)
                 c[badI] = 1.0
             end
-            R = sqrt(Q0 - c'*Qh*c)
+            R = sqrt(q0 - c'*Qr*c)
             return Cylinder(R, c, a)
  
         else
@@ -244,9 +246,9 @@ end
 
 function classify(q::Quadric)
 
-    Qh = q.Q[1:3,1:3]
+    Qr = q.Q[1:3,1:3]
 
-    E = eigvals(Qh)
+    E = eigvals(Qr)
 
     p = sum(E .> 0)
     n = sum(E .< 0)
