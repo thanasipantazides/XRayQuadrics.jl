@@ -146,12 +146,12 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
     Yc1 = [zeros(nθ, 1) Y[:,1]]
     Yc2 = [zeros(nθ, 1) Y[:,end]]
     Zc1 = [Z[:,1] Z[:,1]]
-    Zc2 = [Z[:,end] Z[:,end]]
+    Zc2 = [Z[:,1] Z[:,1]]
 
     # print(typeof(s))
     (X, Y, Z) = transform_to_axis(X, Y, Z, [0;0;1], a, c)
-    (Xc1, Yc1, Zc1) = transform_to_axis(Xc1, Yc1, Zc1, [0;0;1], ps[1].a, c + ca1)   # FIX THESE: WRONG MESH POSITION
-    (Xc2, Yc2, Zc2) = transform_to_axis(Xc2, Yc2, Zc2, [0;0;1], ps[2].a, c + ca1)
+    (Xc1, Yc1, Zc1) = transform_to_axis(Xc1, Yc1, Zc1, [0;0;1], ps[1].a, c)   # FIX THESE: WRONG MESH POSITION
+    (Xc2, Yc2, Zc2) = transform_to_axis(Xc2, Yc2, Zc2, [0;0;1], ps[2].a, c + h2*a)
 
     return ((X,Xc1,Xc2), (Y,Yc1,Yc2), (Z,Zc1,Zc2))
 end

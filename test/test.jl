@@ -33,7 +33,8 @@ vp = eigvecs(qp.Q[1:3,1:3])
 
 classify(qc)
 
-ax = [1;1;1]
+ax = [1;2;3]
+ax = ax/norm(ax)
 center = [10;0;0]
 R = 1
 b = 1
@@ -103,11 +104,11 @@ end
 # Plots.quiver(prays[1,:], prays[2,:], prays[3,:], quiver=(pnorm[1,:], pnorm[2,:], pnorm[3,:]))
 
 
-# Plots.scatter!([prays[1,:] prays[1,:]+pnorm[1,:]], [prays[2,:] prays[2,:]+pnorm[2,:]], [prays[3,:] prays[3,:]+pnorm[3,:]], color=:cyan, markersize=0.2)
+Plots.scatter!([prays[1,:] prays[1,:]+pnorm[1,:]], [prays[2,:] prays[2,:]+pnorm[2,:]], [prays[3,:] prays[3,:]+pnorm[3,:]], color=:blue, markersize=1)
 
 Plots.scatter!([hrays[1,:] hrays[1,:]+hnorm[1,:]], [hrays[2,:] hrays[2,:]+hnorm[2,:]], [hrays[3,:] hrays[3,:]+hnorm[3,:]], color=:red, markersize=1)
 
-# Plots.scatter!([crays[1,:] crays[1,:]+cnorm[1,:]], [crays[2,:] crays[2,:]+cnorm[2,:]], [crays[3,:] crays[3,:]+cnorm[3,:]], color=:green, markersize=0.2)
+Plots.scatter!([crays[1,:] crays[1,:]+cnorm[1,:]], [crays[2,:] crays[2,:]+cnorm[2,:]], [crays[3,:] crays[3,:]+cnorm[3,:]], color=:green, markersize=1)
 
 
 a = 9
@@ -116,3 +117,4 @@ Plots.ylims!((center[2]-a,center[2]+a))
 Plots.zlims!((center[3]-a,center[3]+a))
 
 display(splot)
+
