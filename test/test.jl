@@ -20,9 +20,9 @@ qh = Quadric(h)
 
 ray = Particle([0;0;10],[0;0;-1],10e3)
 
-tp = inout(ray, qp)
-tc = inout(ray, qc)
-th = inout(ray, qh)
+tp = in_out(ray, qp)
+tc = in_out(ray, qc)
+th = in_out(ray, qh)
 
 Ec = eigvals(qc.Q[1:3,1:3])
 Eh = eigvals(qh.Q[1:3,1:3])
@@ -33,9 +33,9 @@ vp = eigvecs(qp.Q[1:3,1:3])
 
 classify(qc)
 
-ax = [1;2;3]
+ax = [1;1;1]
 ax = ax/norm(ax)
-center = [10;0;0]
+center = [0;0;0]
 R = 1
 b = 1
 c = Cylinder(R, center, ax)
@@ -87,9 +87,9 @@ for i = 1:nray
     dir = dir/norm(dir)
     rays[i] = Particle(center + 1*ax, dir, 10)
 
-    (cin, cout) = inout(rays[i], qc)
-    (pin, pout) = inout(rays[i], qp)
-    (hin, hout) = inout(rays[i], qh)
+    (cin, cout) = in_out(rays[i], qc)
+    (pin, pout) = in_out(rays[i], qp)
+    (hin, hout) = in_out(rays[i], qh)
     chits[i] = max(cin, cout)
     phits[i] = max(pin, pout)
     hhits[i] = max(hin, hout)

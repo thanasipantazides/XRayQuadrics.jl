@@ -1,11 +1,11 @@
 using XRayTrace
 
 """
-    inout(p::Particle, q::Quadric)
+    in_out(p::Particle, q::Quadric)
 
 Computes entry and exit times for a `Particle` passing through a `Quadric` surface.
 """
-function inout(p::Particle, q::Quadric)
+function in_out(p::Particle, q::Quadric)
     # Project to homogeneous coordinate
     rh = [p.r0;1]   # AN ISSUE WITH THIS: if r = r0 + vΔt, and r0 and v have 1 as their homogenous coord, get (1 + Δt) as the          homogeneous coord for r. FIX
     vh = [p.v;0]    # REMOVE TIME TERM IN HOMEOGENEOUS COORDS?
@@ -189,11 +189,11 @@ function lengthsinattenuator(photon, attenuator)
 end
 
 """
-    absorptionprobability(photon, attenuator)
+    absorption_probability(photon, attenuator)
 
 Return the probability of a photon::Particle being absorbed in attenuator::PixelatedAttenuator.
 """
-function absorptionprobability(photon, attenuator)
+function absorption_probability(photon, attenuator)
     lengths = lengthsinattenuator(photon, attenuator)
     if length(lengths) != 0
         transmissionlikelihoods = zeros(BigFloat, length(lengths))
@@ -215,11 +215,11 @@ function absorptionprobability(photon, attenuator)
 end
 
 """
-    transmissionprobability(photon, attenuator)
+    transmission_probability(photon, attenuator)
 
 Return the probability of a photon::Particle being transmitted through attenuator::PixelatedAttenuator.
 """
-function transmissionprobability(photon, attenuator)
+function transmission_probability(photon, attenuator)
     lengths = lengthsinattenuator(photon, attenuator)
     if length(lengths) != 0
         transmissionlikelihoods = zeros(BigFloat, length(lengths))
@@ -240,14 +240,14 @@ function transmissionprobability(photon, attenuator)
 end
 
 """
-    batchphotons(photons, attenuator)
+    batch_photons(photons, attenuator)
 
 Compute absorption likelihood for a set of `photons` passing through `attenuator`. If multiple processes are available, computation will be parallelized. To execute in parallel, use the `Distributed` module in the calling context, add processes using `addprocs(n)`, and include this source with the `@everywhere` macro before `using` the module:
     
     @everywhere include("Attenuator3D.jl")
     using .Attenuator3D
 """
-function batchphotons(photons, attenuator)
+function batch_photons(photons, attenuator)
     # check if multiple processes available:
     if nprocs() > 1
         # need to factor jobsize by nworkers()
@@ -274,7 +274,7 @@ function batchphotons(photons, attenuator)
             locali = DistributedArrays.localindices(transmitlikelihood)
 
             for i = 1:length(localtransmitlikelihood)
-                localtransmitlikelihood[i] = transmissionprobability(inphotons[i,locali[2][1]], attenuator)
+                localtransmitlikelihood[i] = transmission_probability(inphotons[i,locali[2][1]], attenuator)
             end
         end
 
@@ -284,7 +284,7 @@ function batchphotons(photons, attenuator)
         transmitlikelihood = zeros(size(photons))
 
         @inbounds for i = 1:length(photons)
-            transmitlikelihood[i] = transmissionprobability(photons[i], attenuator)
+            transmitlikelihood[i] = transmission_probability(photons[i], attenuator)
         end
         return transmitlikelihood
     end

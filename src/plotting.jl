@@ -33,18 +33,18 @@ function Makie.plot!(plot::PlotTQ{<:Tuple{TruncatedQuadric}})
         shading=false,
         color=fill(RGBA(1.0,0.0,0.0,0.4), size(X)...)
     )
-    # if plot[:plot_caps][]
-    #     Makie.surface!(
-    #         plot, Xs[2], Ys[2], Zs[2],
-    #         shading=false,
-    #         color=fill(RGBA(0.0,0.0,1.0,0.4), size(Xs[2]))
-    #     )
-    #     Makie.surface!(
-    #         plot, Xs[3], Ys[3], Zs[3],
-    #         shading=false,
-    #         color=fill(RGBA(0.0,0.0,1.0,0.4), size(Xs[3]))
-    #     )
-    # end
+    if plot[:plot_caps][]
+        Makie.surface!(
+            plot, Xs[2], Ys[2], Zs[2],
+            shading=false,
+            color=fill(RGBA(0.0,0.0,1.0,0.4), size(Xs[2]))
+        )
+        Makie.surface!(
+            plot, Xs[3], Ys[3], Zs[3],
+            shading=false,
+            color=fill(RGBA(0.0,0.0,1.0,0.4), size(Xs[3]))
+        )
+    end
     return plot
 end
 

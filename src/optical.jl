@@ -33,6 +33,7 @@ end
 struct Mirror
     caps::Vector{Plane}
     surf::Quadric
+    matl::String
 end
 
 struct WolterIShell

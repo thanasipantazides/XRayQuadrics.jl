@@ -6,7 +6,7 @@ using Distributed, DistributedArrays
 # using SharedArrays
 using LinearAlgebra
 using Random
-import JSON, CSV, DataFrames
+import JSON, HDF5, CSV, DataFrames
 using Colors
 using GLMakie
 # using Plots
@@ -15,12 +15,16 @@ import SpecialFunctions
 
 export Particle, PixelatedAttenuator
 export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, classify, normal, changerepresentation
-export inout, batchphotons, transmissionprobability, absorptionprobability, lengthsinattenuator, cylinderentryexit
+export in_out, batch_photons, transmission_probability, absorption_probability, lengthsinattenuator, cylinderentryexit
 export PlotTruncatedQuadric, convert_arguments, cartesian_grid, get_mesh, plot, plot!
+export bin
+export get_reflection_data
 
 include("quadrics.jl")
 include("optical.jl")
 include("tracing.jl")
 include("plotting.jl")
+include("analysis.jl")
+include("utils.jl")
 
 end

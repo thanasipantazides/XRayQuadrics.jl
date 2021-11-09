@@ -34,8 +34,8 @@ sray = Particle([0;0;0],[1;1;1],10e3)
     @testset "center conversion" begin
         @test s.a'*(tqs.c - s.c) < ε        # computed center and original center are coplanar
         @test c.a'*(tqc.c - c.c) - 1 < ε    # computed and true centers lie on axis
-        @test p.a'*(tqp.c - p.c) - 1 < ε
-        @test h.a'*(tqh.c - h.c) - 1 < ε
+        @test norm(tqp.c - p.c) < ε         # computed and true centers are same
+        @test norm(tqh.c - h.c) < ε
     end
 
     @testset "radius conversion" begin
@@ -49,9 +49,9 @@ sray = Particle([0;0;0],[1;1;1],10e3)
     end
 
     @testset "intersections" begin
-        @test all(inout(sray, qs) .== (0,(s.a'*s.c - s.a'*sray.r0)/(s.a'*sray.v)))
+        @test all(in_out(sray, qs) .== (0,(s.a'*s.c - s.a'*sray.r0)/(s.a'*sray.v)))
         cray = Particle(c.c, [0;0;1], 10e3)
-        @test all(inout(cray, qc) .== (-c.R, c.R))
+        @test all(in_out(cray, qc) .== (-c.R, c.R))
     end
 
     @testset "normal vectors" begin
