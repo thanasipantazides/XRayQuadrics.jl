@@ -103,7 +103,6 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
     h1 = ca1'*s.a
     h2 = ca2'*s.a
 
-    R = s.R
     a = s.a
     c = s.c
     θ = range(0, stop=2π, length=nθ)
@@ -115,6 +114,7 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
     Z = zeros(nθ, nζ)
 
     if typeof(s) == Cylinder
+        R = s.R
         for i in 1:nθ
             for j in 1:nζ
                 X[i,j] = R*cos(θ[i])
@@ -123,14 +123,16 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
             end
         end
     elseif typeof(s) == Paraboloid
+        b = s.b
         for i in 1:nθ
             for j in 1:nζ
-                X[i,j] = R*sqrt(ζ[j])*cos(θ[i])
-                Y[i,j] = R*sqrt(ζ[j])*sin(θ[i])
+                X[i,j] = b*sqrt(ζ[j])*cos(θ[i])
+                Y[i,j] = b*sqrt(ζ[j])*sin(θ[i])
                 Z[i,j] = ζ[j]
             end
         end
     elseif typeof(s) == Hyperboloid
+        R = s.R
         b = s.b
         for i in 1:nθ
             for j in 1:nζ

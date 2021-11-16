@@ -3,7 +3,7 @@ using LinearAlgebra
 """
     Plane(c::Vector{Float64}, a::Vector{Float64})
 
-Construct a `Plane` from a point `c` which lies in the plane and a unit normal `a`. Currently, `c` and `a` are forced to be 3-vectors.
+Construct a `Plane` from a point `c` which lies in the plane and a unit normal `a`.
 """
 struct Plane
     c::Vector{Float64}
@@ -36,19 +36,19 @@ struct Cylinder
 end
 
 """
-    Paraboloid(R::Float64, c::Vector{Float64}, a::Vector{Float64})
+    Paraboloid(b::Float64, c::Vector{Float64}, a::Vector{Float64})
 
-Construct a `Paraboloid` at vertex `c` with growth rate `R` and unit axis `a`.
+Construct a `Paraboloid` at vertex `c` with growth rate `b` and unit axis `a`.
 """
 struct Paraboloid
-    R::Real
+    b::Real
     c::Vector{Float64}
     a::Vector{Float64}
-    Paraboloid(R,c,a) = begin
+    Paraboloid(b,c,a) = begin
         if length(c) != 3 || length(a) != 3
             error("3-vectors please")
         else
-            new(R,c,a/norm(a))
+            new(b,c,a/norm(a))
         end
     end
 end
@@ -118,8 +118,8 @@ function Quadric(s::Cylinder)
 end
 
 function Quadric(s::Paraboloid)
-    Q = [s.a*s.a' - I   s.R^2/2*s.a + (I - s.a*s.a')*s.c;
-         (s.R^2/2*s.a + (I - s.a*s.a')*s.c)'    -s.R^2*s.a'*s.c + s.c'*(s.a*s.a' - I)*s.c]
+    Q = [s.a*s.a' - I   s.b^2/2*s.a + (I - s.a*s.a')*s.c;
+         (s.b^2/2*s.a + (I - s.a*s.a')*s.c)'    -s.b^2*s.a'*s.c + s.c'*(s.a*s.a' - I)*s.c]
     return Quadric(Q)
 end
 
@@ -186,15 +186,15 @@ function changerepresentation(q::Quadric)
         if rank(q.Q) == 4
             # paraboloid
             a = sign(qd'*a)*a       # correct for antiparallel axis
-            R = sqrt(2*qd'*a)
+            b = sqrt(2*qd'*a)
             
             cb1 = v[:,1]'*qd
             cb2 = v[:,2]'*qd
-            cb3 = -(q0 + cb1^2 + cb2^2)/R^2
+            cb3 = -(q0 + cb1^2 + cb2^2)/b^2
 
             c = v*[cb1; cb2; cb3]
 
-            return Paraboloid(R, c, a)
+            return Paraboloid(b, c, a)
  
         elseif rank(q.Q) == 3
             # cylinder
@@ -235,7 +235,7 @@ function normal(s::Cylinder, r::Vector{Float64})
 end
 
 function normal(s::Paraboloid, r::Vector{Float64})
-    n = s.R^2*s.a + 2*(s.a - (r - s.c)./norm(r - s.c))
+    n = s.b^2*s.a + 2*(s.a - (r - s.c)./norm(r - s.c))
     return n/norm(n)
 end
 

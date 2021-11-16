@@ -41,11 +41,11 @@ sray = Particle([0;0;0],[1;1;1],10e3)
     @testset "radius conversion" begin
         @test tqc.R - c.R < ε               # computed radius and original radius are same
         @test tqh.R - h.R < ε
-        @test tqp.R - p.R < ε
     end
 
-    @testset "hyperboloid conversion" begin      # computed hyperbolic coeff and original coeff are same
+    @testset "hyperboloid, paraboloid conversion" begin      # computed hyperbolic coeff and original coeff are same
         @test tqh.b - h.b < ε
+        @test tqp.b - p.b < ε
     end
 
     @testset "intersections" begin

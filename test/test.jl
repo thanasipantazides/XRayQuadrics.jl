@@ -39,7 +39,7 @@ center = [0;0;0]
 R = 1
 b = 1
 c = Cylinder(R, center, ax)
-p = Paraboloid(R, center, ax)
+p = Paraboloid(b, center, ax)
 h = Hyperboloid(R, b, center, ax)
 
 p1 = Plane(c.a*0.01, ax)
