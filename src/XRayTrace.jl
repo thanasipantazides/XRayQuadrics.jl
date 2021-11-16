@@ -6,7 +6,7 @@ using LinearAlgebra
 using Random
 import JSON, HDF5, CSV, DataFrames
 using Colors
-import GLMakie, Plots
+using Plots
 
 export Particle, PixelatedAttenuator
 export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, classify, normal, changerepresentation

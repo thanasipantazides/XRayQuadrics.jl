@@ -1,5 +1,5 @@
 using XRayTrace
-import GLMakie, Plots
+using Plots
 using Colors
 
 # macro expands to:
@@ -8,45 +8,45 @@ using Colors
 #   plottq!(args...; kw_args...) = ...
 #   function default_theme(scene, ::PlotTQ) = ...
 
-@Makie.recipe(PlotTQ, obj) do scene
-    Makie.Attributes(;
-        plot_caps = true,
-        color = :red,
-        seriesalpha = 0.667,
-        light_source = [0;0;1]
-    )
-end
+# @Makie.recipe(PlotTQ, obj) do scene
+#     Makie.Attributes(;
+#         plot_caps = true,
+#         color = :red,
+#         seriesalpha = 0.667,
+#         light_source = [0;0;1]
+#     )
+# end
 
-Makie.plottype(::TruncatedQuadric) = PlotTQ{<:Tuple{TruncatedQuadric}}
+# Makie.plottype(::TruncatedQuadric) = PlotTQ{<:Tuple{TruncatedQuadric}}
 
-function Makie.plot!(plot::PlotTQ{<:Tuple{TruncatedQuadric}})
-    tq = plot[:obj][]
+# function Makie.plot!(plot::PlotTQ{<:Tuple{TruncatedQuadric}})
+#     tq = plot[:obj][]
 
-    (Xs, Ys, Zs) = cartesian_grid(tq)
+#     (Xs, Ys, Zs) = cartesian_grid(tq)
 
-    X = Xs[1]
-    Y = Ys[1]
-    Z = Zs[1]
+#     X = Xs[1]
+#     Y = Ys[1]
+#     Z = Zs[1]
 
-    Makie.surface!(
-        plot, X, Y, Z,
-        shading=false,
-        color=fill(RGBA(1.0,0.0,0.0,0.4), size(X)...)
-    )
-    if plot[:plot_caps][]
-        Makie.surface!(
-            plot, Xs[2], Ys[2], Zs[2],
-            shading=false,
-            color=fill(RGBA(0.0,0.0,1.0,0.4), size(Xs[2]))
-        )
-        Makie.surface!(
-            plot, Xs[3], Ys[3], Zs[3],
-            shading=false,
-            color=fill(RGBA(0.0,0.0,1.0,0.4), size(Xs[3]))
-        )
-    end
-    return plot
-end
+#     Makie.surface!(
+#         plot, X, Y, Z,
+#         shading=false,
+#         color=fill(RGBA(1.0,0.0,0.0,0.4), size(X)...)
+#     )
+#     if plot[:plot_caps][]
+#         Makie.surface!(
+#             plot, Xs[2], Ys[2], Zs[2],
+#             shading=false,
+#             color=fill(RGBA(0.0,0.0,1.0,0.4), size(Xs[2]))
+#         )
+#         Makie.surface!(
+#             plot, Xs[3], Ys[3], Zs[3],
+#             shading=false,
+#             color=fill(RGBA(0.0,0.0,1.0,0.4), size(Xs[3]))
+#         )
+#     end
+#     return plot
+# end
 
 Plots.@recipe function f(tq::TruncatedQuadric; plot_caps = false)
     # color       --> :blue
