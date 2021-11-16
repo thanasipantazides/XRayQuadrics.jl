@@ -2,16 +2,11 @@
 module XRayTrace
 
 using Distributed, DistributedArrays
-# using BigFloat
-# using SharedArrays
 using LinearAlgebra
 using Random
 import JSON, HDF5, CSV, DataFrames
 using Colors
-using GLMakie
-# using Plots
-# using ArbNumerics
-import SpecialFunctions
+import GLMakie, Plots
 
 export Particle, PixelatedAttenuator
 export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, classify, normal, changerepresentation

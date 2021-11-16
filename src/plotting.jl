@@ -1,6 +1,6 @@
 using XRayTrace
-using GLMakie, Colors
-using Plots
+import GLMakie, Plots
+using Colors
 
 # macro expands to:
 #   const PlotTQ{ArgTypes} = Combined{plottq, ArgTypes}
