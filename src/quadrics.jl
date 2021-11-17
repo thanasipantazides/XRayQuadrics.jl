@@ -72,7 +72,11 @@ struct Hyperboloid
     end
 end
 
+"""
+    Quadric(Q::Matrix{Float64})
 
+Construct a `Quadric` surface from a 4x4 symmetric quadric matrix.
+"""
 struct Quadric
     Q::Matrix{Float64}
     Quadric(Q) = begin
@@ -87,7 +91,7 @@ end
 """
     TruncatedQuadric(q::Quadric, p::Vector{Plane})
 
-Construct a `TruncatedQuadric` surface by slicing a non-degenerate `Quadric` q by two planes `p`. Planes may not contain quadric axis.
+Construct a `TruncatedQuadric` surface by slicing a non-degenerate `Quadric` q with two planes `p`. Planes may not contain quadric axis.
 """
 struct TruncatedQuadric
     q::Quadric
@@ -105,24 +109,60 @@ struct TruncatedQuadric
     end
 end
 
+@doc raw"""
+    Quadric(s::Plane)
+
+Construct a `Quadric` from a `Plane` (with attributes axis = `a` = ``\boldsymbol{a}``; and point in plane = `c` = ``\boldsymbol{c}``) using the definition:
+
+``\boldsymbol{Q}_s = \begin{bmatrix} \boldsymbol{0} & \frac{1}{2}\boldsymbol{a} \\ \frac{1}{2}\boldsymbol{a}^\mathsf{T} & -\boldsymbol{a}^\mathsf{T}\boldsymbol{c} \end{bmatrix}``
+"""
 function Quadric(s::Plane)
     Q = [zeros(3,3)      0.5*s.a;
          0.5*s.a'        -s.a'*s.c]
     return Quadric(Q)
 end
 
+@doc raw"""
+    Quadric(s::Cylinder)
+
+Construct a `Quadric` from a `Cylinder` (which has attributes axis = `a` = ``\boldsymbol{a}``; point on axis = `c` = ``\boldsymbol{c}``; and radius = `R` = ``R``) using the definitions:
+
+``\boldsymbol{Q}_r = \boldsymbol{a}\boldsymbol{a}^\mathsf{T} - \boldsymbol{1}``
+
+``\boldsymbol{Q}_c = \begin{bmatrix} \boldsymbol{Q}_r & -\boldsymbol{Q}_r\boldsymbol{c} \\ -\boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r & R^2 + \boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r\boldsymbol{c} \end{bmatrix}``
+"""
 function Quadric(s::Cylinder)
     Q = [s.a*s.a' - I            (I - s.a*s.a')*s.c;
          ((I - s.a*s.a')*s.c)'   s.R^2 + s.c'*(s.a*s.a' - I)*s.c]
     return Quadric(Q)
 end
 
+@doc raw"""
+    Quadric(s::Paraboloid)
+
+Construct a `Quadric` from a `Paraboloid` (which has attributes axis = `a` = ``\boldsymbol{a}``; point on axis = `c` = ``\boldsymbol{c}``; and quadratic parameter = `b` = ``b``) using the definitions:
+
+``\boldsymbol{Q}_r = \boldsymbol{a}\boldsymbol{a}^\mathsf{T} - \boldsymbol{1}``
+
+``\boldsymbol{Q}_p = \begin{bmatrix} \boldsymbol{Q}_r & \frac{b^2}{2}\boldsymbol{a} - \boldsymbol{Q}_r\boldsymbol{c} \\ \frac{b^2}{2}\boldsymbol{a}^\mathsf{T} - \boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r & -b^2\boldsymbol{a}^\mathsf{T}\boldsymbol{c} + \boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r\boldsymbol{c} \end{bmatrix}``
+"""
 function Quadric(s::Paraboloid)
     Q = [s.a*s.a' - I   s.b^2/2*s.a + (I - s.a*s.a')*s.c;
          (s.b^2/2*s.a + (I - s.a*s.a')*s.c)'    -s.b^2*s.a'*s.c + s.c'*(s.a*s.a' - I)*s.c]
     return Quadric(Q)
 end
 
+@doc raw"""
+    Quadric(s::Hyperboloid)
+
+Construct a `Quadric` from a `Hyperboloid` (which has attributes axis = `a` = ``\boldsymbol{a}``; point on axis = `c` = ``\boldsymbol{c}``; neck radius = `R` = ``R``; and slope parameter = `b` = ``b``) using the definitions:
+
+``\gamma = 1 + \frac{R^2}{b^2}``
+
+``\boldsymbol{Q}_r = \gamma\boldsymbol{a}\boldsymbol{a}^\mathsf{T} - \boldsymbol{1}``
+
+``\boldsymbol{Q}_h = \begin{bmatrix} \boldsymbol{Q}_r & -\boldsymbol{Q}_r\boldsymbol{c} \\ -\boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r & R^2 + \boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r\boldsymbol{c} \end{bmatrix}``
+"""
 function Quadric(s::Hyperboloid)
     γ = (1 + s.R^2/s.b^2)
     Q = [γ*s.a*s.a' - I     (I - γ*s.a*s.a')*s.c;
@@ -130,9 +170,25 @@ function Quadric(s::Hyperboloid)
     return Quadric(Q)
 end
 
-TruncatedQuadric(s::Plane, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p) 
+"""
+    TruncatedQuadric(s::Cylinder, p::Vector{Plane})
+
+Construct a `TruncatedQuadric` surface from a `Cylinder` and set of `Plane`s by converting `Cylinder` directly to a `Quadric`.
+"""
 TruncatedQuadric(s::Cylinder, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
+
+"""
+    TruncatedQuadric(s::Paraboloid, p::Vector{Plane})
+
+Construct a `TruncatedQuadric` surface from a `Paraboloid` and set of `Plane`s by converting `Paraboloid` directly to a `Quadric`.
+"""
 TruncatedQuadric(s::Paraboloid, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
+
+"""
+    TruncatedQuadric(s::Hyperboloid, p::Vector{Plane})
+
+Construct a `TruncatedQuadric` surface from a `Hyperboloid` and set of `Plane`s by converting `Hyperboloid` directly to a `Quadric`.
+"""
 TruncatedQuadric(s::Hyperboloid, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
 
 """
@@ -156,6 +212,14 @@ function TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64})
     return TruncatedQuadric(q, [p1, p2])
 end
 
+@doc raw"""
+    changerepresentation(q::Quadric)
+
+Converts a `Quadric` to a `Plane`, `Cylinder`, `Paraboloid`, or `Hyperboloid` based on its matrix structure. 
+
+!!! note 
+    This function is not fast. Minimize conversion between explicit surface and quadric matrix in heavy-lifting code. 
+"""
 function changerepresentation(q::Quadric)
     ε = 1e-15
 
@@ -213,11 +277,42 @@ function changerepresentation(q::Quadric)
     end
 end
 
+"""
+    changerepresentation(s::Plane)
+
+Convert a `Plane` to `Quadric` representation via the `Quadric(s::Plane)` constructor.
+"""
 changerepresentation(s::Plane) = Quadric(s)
+
+"""
+    changerepresentation(s::Cylinder)
+
+Convert a `Cylinder` to `Quadric` representation via the `Quadric(s::Cylinder)` constructor.
+"""
 changerepresentation(s::Cylinder) = Quadric(s)
+
+"""
+    changerepresentation(s::Paraboloid)
+
+Convert a `Paraboloid` to `Quadric` representation via the `Quadric(s::Paraboloid)` constructor.
+"""
 changerepresentation(s::Paraboloid) = Quadric(s)
+
+"""
+    changerepresentation(s::Hyperboloid)
+
+Convert a `Hyperboloid` to `Quadric` representation via the `Quadric(s::Hyperboloid)` constructor.
+"""
 changerepresentation(s::Hyperboloid) = Quadric(s)
 
+"""
+    normal(q::Quadric, r::Vector{Float64})
+
+Returns unit normal vector to a `Quadric` at position `r` on the surface. 
+
+!!! warning
+    This will return a normal vector even if `r` does not fall on the surface. It is up to *you* to input an `r` you know to lie on the surface of `q`.
+"""
 function normal(q::Quadric, r::Vector{Float64})
     n = 2*q.Q*[r; 1]
     n = n[1:3]
@@ -225,20 +320,49 @@ function normal(q::Quadric, r::Vector{Float64})
     return n
 end
 
+"""
+    normal(s::Plane, r::Vector{Float64})
+
+Returns unit normal vector to a `Plane`. This will return the `Plane`'s normal vector regardless of the `r` supplied; it takes the `r` argument nonetheless to maintain the same pattern as `normal()` functions for nondegenerate `Quadric`s.
+"""
 function normal(s::Plane, r::Vector{Float64})
     return s.a
 end
 
+"""
+    normal(s::Cylinder, r::Vector{Float64})
+
+Returns unit normal vector to a `Cylinder` at position `r` on the surface. 
+
+!!! warning
+    This will return a normal vector even if `r` does not fall on the surface. It is up to *you* to input an `r` you know to lie on the surface of `s`.
+"""
 function normal(s::Cylinder, r::Vector{Float64})
     n = 2*(s.a - (r - s.c)./norm(r - s.c))
     return n/norm(n)
 end
 
+"""
+    normal(s::Paraboloid, r::Vector{Float64})
+
+Returns unit normal vector to a `Paraboloid` at position `r` on the surface. 
+
+!!! warning
+    This will return a normal vector even if `r` does not fall on the surface. It is up to *you* to input an `r` you know to lie on the surface of `s`.
+"""
 function normal(s::Paraboloid, r::Vector{Float64})
     n = s.b^2*s.a + 2*(s.a - (r - s.c)./norm(r - s.c))
     return n/norm(n)
 end
 
+"""
+    normal(s::Hyperboloid, r::Vector{Float64})
+
+Returns normal vector to a `Hyperboloid` at position `r` on the surface. 
+
+!!! warning
+    This will return a normal vector even if `r` does not fall on the surface. It is up to *you* to input an `r` you know to lie on the surface of `q`.
+"""
 function normal(s::Hyperboloid, r::Vector{Float64})
     n = 2*((1 + s.R^2/s.b^2)*s.a - (r - s.c)./norm(r - s.c))
     return n/norm(n)

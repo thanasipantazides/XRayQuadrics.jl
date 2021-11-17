@@ -49,7 +49,7 @@ sray = Particle([0;0;0],[1;1;1],10e3)
     end
 
     @testset "intersections" begin
-        @test all(in_out(sray, qs) .== (0,(s.a'*s.c - s.a'*sray.r0)/(s.a'*sray.v)))
+        @test all(in_out(sray, qs) .== ((s.a'*s.c - s.a'*sray.r0)/(s.a'*sray.v),0))
         cray = Particle(c.c, [0;0;1], 10e3)
         @test all(in_out(cray, qc) .== (-c.R, c.R))
     end

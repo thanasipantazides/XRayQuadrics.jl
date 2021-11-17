@@ -3,42 +3,73 @@ using XRayQuadrics
 """
     in_out(p::Particle, q::Quadric)
 
-Computes entry and exit times for a `Particle` passing through a `Quadric` surface.
+Computes entry and exit times for a `Particle` passing through a `Quadric` surface. Returns an Array of length 2, with the entry and exit times in increasing order, unless there is only one intersection with the surface, in which case the time is the first element. If there is no interaction, returns two zeros.
 """
 function in_out(p::Particle, q::Quadric)
     # Project to homogeneous coordinate
-    rh = [p.r0;1]   # AN ISSUE WITH THIS: if r = r0 + vΔt, and r0 and v have 1 as their homogenous coord, get (1 + Δt) as the          homogeneous coord for r. FIX
+    rh = [p.r0;1]   # AN ISSUE WITH THIS: if r = r0 + vΔt, and r0 and v have 1 as their     homogenous coord, get (1 + Δt) as the homogeneous coord for r. FIX
     vh = [p.v;0]    # REMOVE TIME TERM IN HOMEOGENEOUS COORDS?
 
     Q = q.Q
+    Qr = Q[1:3,1:3]
+    qd = Q[1:3,end]
+    q0 = Q[end]
+
     # check for coplanar/axial alignment
     denom = vh'*Q*vh
-    if denom == 0.0
-        if all(Q[1:3, 1:3] .== 0)
-            # a plane
-            Qd = 2*Q[1:3,end]
-            if Qd'*p.v == 0
-                return (0,0)
-            else
-                return (0, (-Qd'*p.r0 - Q[end])/(Qd'*p.v))
+
+    if all(Qr .== 0)                # plane
+        if qd'*p.v == 0             # ray parallel to plane
+            return [0, 0]
+        else                        # ray intersects plane
+            a = 2*qd
+            return [(-q0 - a'*p.r0)/(a'*p.v), 0]
+        end
+    else                            # nondegenerate quadric
+        if denom == 0               # ray parallel to axis, not hyperboloid
+            if qd'*p.v != 0         # paraboloid
+                return [(p.r0'*Qr*p.r0 + 2*qd'*p.r0 + q0)/(2*qd'*p.v), 0]
+            else                    # cylinder, but ray parallel to axis
+                return [0, 0]
             end
-        else
-            # colinear with nondegenerate quadric axis
-            return (0,0)
+        else                        # ray oblique to axis, or hyperboloid
+            post = (sqrt(Complex((vh'*Q*rh)^2 - (vh'*Q*vh)*(rh'*Q*rh))))/denom
+            pred = (-vh'*Q*rh)/denom
+            if imag(post) == 0      # ray hits quadric
+                post = real(post)
+                return [min(pred - post, pred + post), max(pred - post, pred + post)]
+            else                    # imaginary solution ⟹ no intersection with quadric
+                return [0, 0]
+            end
         end
     end
 
-    post = (sqrt(Complex((vh'*Q*rh)^2 - (vh'*Q*vh)*(rh'*Q*rh))))/denom
-    pred = (-vh'*Q*rh)/denom
+    # if denom == 0.0
+    #     if all(Q[1:3, 1:3] .== 0)
+    #         # a plane
+    #         Qd = 2*Q[1:3,end]
+    #         if Qd'*p.v == 0
+    #             return (0,0)
+    #         else
+    #             return (0, (-Qd'*p.r0 - Q[end])/(Qd'*p.v))
+    #         end
+    #     else
+    #         # colinear with nondegenerate quadric axis
+    #         return (0,0)
+    #     end
+    # end
 
-    if imag(post) == 0
-        post = real(post)
-        # sort roots in ascending order
-        return extrema([pred - post, pred + post])
-    else
-        # imaginary component implies no intersection
-        return (0,0)
-    end
+    # post = (sqrt(Complex((vh'*Q*rh)^2 - (vh'*Q*vh)*(rh'*Q*rh))))/denom
+    # pred = (-vh'*Q*rh)/denom
+
+    # if imag(post) == 0
+    #     post = real(post)
+    #     # sort roots in ascending order
+    #     return extrema([pred - post, pred + post])
+    # else
+    #     # imaginary component implies no intersection
+    #     return (0,0)
+    # end
 end
 
 """

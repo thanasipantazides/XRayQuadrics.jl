@@ -9,7 +9,7 @@ using Colors
 using Plots
 
 export Particle, PixelatedAttenuator
-export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, classify, normal, changerepresentation
+export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, normal, changerepresentation
 export in_out, batch_photons, transmission_probability, absorption_probability, lengthsinattenuator, cylinderentryexit
 export PlotTruncatedQuadric, convert_arguments, cartesian_grid, get_mesh, plot, plot!
 export bin

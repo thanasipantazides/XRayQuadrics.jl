@@ -1,6 +1,6 @@
 using XRayQuadrics
 using LinearAlgebra
-using GLMakie, Colors
+using Colors
 using Plots
 
 n = [0;0;1]
