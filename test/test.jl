@@ -1,4 +1,4 @@
-using XRayTrace
+using XRayQuadrics
 using LinearAlgebra
 using GLMakie, Colors
 using Plots

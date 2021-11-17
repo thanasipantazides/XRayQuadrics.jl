@@ -1,4 +1,4 @@
-using XRayTrace
+using XRayQuadrics
 using LinearAlgebra
 using Test
 
@@ -20,7 +20,7 @@ tqp = changerepresentation(qp)
 
 sray = Particle([0;0;0],[1;1;1],10e3)
 
-@testset "XRayTrace.jl" begin
+@testset "XRayQuadrics.jl" begin
     # Write your tests here.
     # test boolean expressions with @test
     ε = 1e-15

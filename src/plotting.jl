@@ -1,4 +1,4 @@
-using XRayTrace
+using XRayQuadrics
 using Plots
 using Colors
 

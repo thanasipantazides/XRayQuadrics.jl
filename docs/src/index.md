@@ -1,13 +1,13 @@
 ```@meta
-CurrentModule = XRayTrace
+CurrentModule = XRayQuadrics
 ```
 
-# XRayTrace Documentation
+# XRayQuadrics Documentation
 
-Documentation for the [XRayTrace](https://github.com/thanasipantazides/XRayTrace.jl) module.
+Documentation for the [XRayQuadrics](https://github.com/thanasipantazides/XRayQuadrics.jl) module.
 
 ## Overview
-`XRayTrace.jl` offers a suite of ray tracing tools designed to model x-ray interactions with optical systems such as telescopes, filters, and detectors.
+`XRayQuadrics.jl` offers a suite of ray tracing tools designed to model x-ray interactions with optical systems such as telescopes, filters, and detectors.
 
 ## Theory
 
@@ -18,5 +18,5 @@ Documentation for the [XRayTrace](https://github.com/thanasipantazides/XRayTrace
 ```
 
 ```@autodocs
-Modules = [XRayTrace]
+Modules = [XRayQuadrics]
 ```

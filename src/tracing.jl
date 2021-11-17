@@ -1,4 +1,4 @@
-using XRayTrace
+using XRayQuadrics
 
 """
     in_out(p::Particle, q::Quadric)

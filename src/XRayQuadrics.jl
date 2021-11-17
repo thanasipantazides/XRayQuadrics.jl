@@ -1,5 +1,5 @@
 # __precompile__()
-module XRayTrace
+module XRayQuadrics
 
 using Distributed, DistributedArrays
 using LinearAlgebra

@@ -1,13 +1,13 @@
-using XRayTrace
+using XRayQuadrics
 using Documenter
 
-DocMeta.setdocmeta!(XRayTrace, :DocTestSetup, :(using XRayTrace); recursive=true)
+DocMeta.setdocmeta!(XRayQuadrics, :DocTestSetup, :(using XRayQuadrics); recursive=true)
 
 makedocs(;
-    modules=[XRayTrace],
+    modules=[XRayQuadrics],
     authors="Thanasi Pantazides <thanasipantazides@gmail.com> and contributors",
-    repo="https://github.com/thanasipantazides/XRayTrace.jl/blob/{commit}{path}#{line}",
-    sitename="XRayTrace.jl",
+    repo="https://github.com/thanasipantazides/XRayQuadrics.jl/blob/{commit}{path}#{line}",
+    sitename="XRayQuadrics.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         assets=String[],

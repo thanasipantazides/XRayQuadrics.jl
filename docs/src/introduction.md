@@ -1,7 +1,7 @@
 # Introduction
 
 ## Notation
-`XRayTrace` is developed to analyze interactions between particles (such as photons) and physical surfaces, and to model the outcome of those interactions. In this documentation, we follow these conventions:
+`XRayQuadrics` is developed to analyze interactions between particles (such as photons) and physical surfaces, and to model the outcome of those interactions. In this documentation, we follow these conventions:
 * Scalars are denoted with italic letters: ``a``, ``Z``, ``\gamma``.
 * Vectors are denoted with bold lowercase: ``\boldsymbol{q}``, ``\boldsymbol{r}``.
 * Matrices are denoted with bold uppercase: ``\boldsymbol{Q}``, ``\boldsymbol{A}``.

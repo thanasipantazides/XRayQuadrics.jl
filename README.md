@@ -1,2 +1,2 @@
-# XRayTrace
-Physical modeling of optical systems using quadric surfaces.
+# XRayQuadrics
+High-energy ray tracing simulation of optical systems made up of quadric surfaces.
