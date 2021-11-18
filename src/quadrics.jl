@@ -89,14 +89,15 @@ struct Quadric
 end
 
 """
-    TruncatedQuadric(q::Quadric, p::Vector{Plane})
+    TruncatedQuadric(q::Quadric, p::Vector{Plane}, caps)
 
-Construct a `TruncatedQuadric` surface by slicing a non-degenerate `Quadric` q with two planes `p`. Planes may not contain quadric axis.
+Construct a `TruncatedQuadric` surface by slicing a non-reducible `Quadric` q with two planes `p`. Planes may not contain quadric axis. Argument `caps=true` closes the volume between the planes, `caps=false` defines an open-ended tube bounded by the `Quadric` and the planes.
 """
 struct TruncatedQuadric
     q::Quadric
     p::Vector{Plane}
-    TruncatedQuadric(q,p) = begin
+    caps::Bool
+    TruncatedQuadric(q,p,caps) = begin
         Qr = q.Q[1:3,1:3]
         if all(eigvals(Qr) .!= 0)
             for plane in p
@@ -105,7 +106,7 @@ struct TruncatedQuadric
                 end
             end
         end
-        new(q,p)
+        new(q,p,caps)
     end
 end
 
@@ -171,45 +172,45 @@ function Quadric(s::Hyperboloid)
 end
 
 """
-    TruncatedQuadric(s::Cylinder, p::Vector{Plane})
+    TruncatedQuadric(s::Cylinder, p::Vector{Plane}, caps=true)
 
 Construct a `TruncatedQuadric` surface from a `Cylinder` and set of `Plane`s by converting `Cylinder` directly to a `Quadric`.
 """
-TruncatedQuadric(s::Cylinder, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
+TruncatedQuadric(s::Cylinder, p::Vector{Plane}, caps=true) = TruncatedQuadric(Quadric(s), p, caps)
 
 """
-    TruncatedQuadric(s::Paraboloid, p::Vector{Plane})
+    TruncatedQuadric(s::Paraboloid, p::Vector{Plane}, caps=true)
 
 Construct a `TruncatedQuadric` surface from a `Paraboloid` and set of `Plane`s by converting `Paraboloid` directly to a `Quadric`.
 """
-TruncatedQuadric(s::Paraboloid, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
+TruncatedQuadric(s::Paraboloid, p::Vector{Plane}, caps=true) = TruncatedQuadric(Quadric(s), p, caps)
 
 """
-    TruncatedQuadric(s::Hyperboloid, p::Vector{Plane})
+    TruncatedQuadric(s::Hyperboloid, p::Vector{Plane}, caps=true)
 
 Construct a `TruncatedQuadric` surface from a `Hyperboloid` and set of `Plane`s by converting `Hyperboloid` directly to a `Quadric`.
 """
-TruncatedQuadric(s::Hyperboloid, p::Vector{Plane}) = TruncatedQuadric(Quadric(s), p)
+TruncatedQuadric(s::Hyperboloid, p::Vector{Plane}, caps=true) = TruncatedQuadric(Quadric(s), p, caps)
 
 """
-    TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64})
+    TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64}, caps=true)
 
 A convenience constructor for a `TruncatedQuadric`. Specify `h1` and `h2` as points along the axis of `q`, and the constructor will return `q` truncated by planes passing through `h1` and `h2` sharing a normal vector equal to the axis of `q`.
 """
-function TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64})
+function TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64}, caps=true)
     s = changerepresentation(q)
     if typeof(s) == Plane
         display("TruncatedQuadric just a bunch of planes")
     end
     
-    if all((h1 - h2)/norm(h1 - h2) .== s.a/norm(s.a))
+    if abs(((h1 - h2)/norm(h1 - h2))'*s.a/norm(s.a)) == 1
         p1 = Plane(h1, s.a)
         p2 = Plane(h2, s.a)
     else
         error("h1, h2 must lie on Quadric axis")
     end
 
-    return TruncatedQuadric(q, [p1, p2])
+    return TruncatedQuadric(q, [p1, p2], caps)
 end
 
 @doc raw"""
@@ -323,7 +324,7 @@ end
 """
     normal(s::Plane, r::Vector{Float64})
 
-Returns unit normal vector to a `Plane`. This will return the `Plane`'s normal vector regardless of the `r` supplied; it takes the `r` argument nonetheless to maintain the same pattern as `normal()` functions for nondegenerate `Quadric`s.
+Returns unit normal vector to a `Plane`. This will return the `Plane`'s normal vector regardless of the `r` supplied; it takes the `r` argument nonetheless to maintain the same pattern as `normal()` functions for nonreducible `Quadric`s.
 """
 function normal(s::Plane, r::Vector{Float64})
     return s.a

@@ -49,9 +49,9 @@ qc = Quadric(c)
 qp = Quadric(p)
 qh = Quadric(h)
 
-tqc = TruncatedQuadric(c, [p1, p2])
-tqp = TruncatedQuadric(p, [p1, p2])
-tqh = TruncatedQuadric(h, [p1, p2])
+tqc = TruncatedQuadric(c, [p1, p2], true)
+tqp = TruncatedQuadric(p, [p1, p2], true)
+tqh = TruncatedQuadric(h, [p1, p2], true)
 
 # f = Figure()
 # scatter([0, 1],[0, 1],[0, 1], plot_color=:red)
