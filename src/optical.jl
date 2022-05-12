@@ -1,8 +1,10 @@
+using XRayQuadrics
 
 struct Particle
     r0::Vector{Float64}     # initial position
     v::Vector{Float64}      # propagation direction (unit)
     E::Float64              # energy
+    id::Int64               # id number for tracking
     Particle(r0,v,E) = begin
         if length(r0) != 3 || length(v) != 3
             error("3-vectors please")
@@ -31,8 +33,8 @@ struct PixelatedAttenuator
 end
 
 struct Mirror
-    caps::Vector{Plane}
-    surf::Quadric
+    tq::TruncatedQuadric
+    reflection_probability::Matrix{Float64}
     matl::String
 end
 
@@ -46,10 +48,10 @@ struct Optic
     blocks::Vector{Attenuator}
 end
 
-function Particle(r0::Vector{Real}, v::Vector{Real}, E::Real)
-    if length(r0) != 3 || length(v) != 3
-        error("3-vectors, please")
-    end
+# function Particle(r0::Vector{Real}, v::Vector{Real}, E::Real)
+#     if length(r0) != 3 || length(v) != 3
+#         error("3-vectors, please")
+#     end
 
-    return Particle(r0, v/norm(v), E)
-end
+#     return Particle(r0, v/norm(v), E)
+# end

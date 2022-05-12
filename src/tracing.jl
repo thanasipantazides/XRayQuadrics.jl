@@ -25,7 +25,7 @@ function in_out(p::Particle, q::Quadric)
             a = 2*qd
             return [(-q0 - a'*p.r0)/(a'*p.v), 0]
         end
-    else                            # nondegenerate quadric
+    else                            # nonreducible quadric
         if denom == 0               # ray parallel to axis, not hyperboloid
             if qd'*p.v != 0         # paraboloid
                 return [(p.r0'*Qr*p.r0 + 2*qd'*p.r0 + q0)/(2*qd'*p.v), 0]
@@ -70,6 +70,54 @@ function in_out(p::Particle, q::Quadric)
     #     # imaginary component implies no intersection
     #     return (0,0)
     # end
+end
+
+"""
+    interacts(p::Particle, tq::TruncatedQuadric)
+
+!!! warning
+    FINISH IMPLEMENTING: should return a copy of `p` and a probability (of reflection or transmission, depending on ) 
+"""
+function interacts(p::Particle, tq::TruncatedQuadric)
+    quadric = tq.q
+    Qr = quadric.Q[1:3,1:3]
+    qd = quadric.Q[1:3,end]
+    q0 = quadric.Q[end]
+
+    plane1 = tq.p[1]
+    plane2 = tq.p[2]
+
+    qtimes = in_out(p,quadric)
+    p1time = in_out(p,plane1)[1]
+    p2time = in_out(p,plane2)[1]
+
+    nzeros = length(findall(qtimes .== 0))
+
+    if nzeros == 2                  # parallel to quadric axis
+        # project into both planes, check if within quadric at those positions
+        # PROBLEM: HOW TO TELL IF IT'S *WITHIN* QUADRIC?
+
+    elseif nzeros == 1              # quadric must be paraboloid
+        # badorders:
+        #   spp (anti-axis)
+        #   pps (with axis)
+        #   ppss    CANNOT APPEAR HERE
+        #   sspp    CANNOT APPEAR HERE
+        if tq.caps
+            dir = sign(qd'*p.v)
+            if dir == 1             # path parallel to axis
+
+            elseif dir == 0
+                error("Particle was supposed to travel parallel to Paraboloid axis.")
+            else                    # path antiparallel to axis
+
+            end
+        else
+            # psp is only passing case
+        end
+    else                            # hits walls of quadric twice
+        
+    end
 end
 
 """
