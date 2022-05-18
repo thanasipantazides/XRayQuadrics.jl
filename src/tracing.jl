@@ -3,7 +3,7 @@ using XRayQuadrics
 """
     in_out(p::Particle, q::Quadric)
 
-Computes entry and exit times for a `Particle` passing through a `Quadric` surface. Returns an Array of length 2, with the entry and exit times in increasing order, unless there is only one intersection with the surface, in which case the time is the first element. If there is no interaction, returns two zeros.
+Computes entry and exit times for a `Particle` passing through a `Quadric` surface. Returns an `Array` of length 2, with the entry and exit times in increasing order, unless there is only one intersection with the surface, in which case the time is the first element. If there is no interaction, returns two zeros.
 """
 function in_out(p::Particle, q::Quadric)
     # Project to homogeneous coordinate
