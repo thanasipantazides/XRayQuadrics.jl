@@ -213,6 +213,16 @@ function TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64}, 
     return TruncatedQuadric(q, [p1, p2], caps)
 end
 
+function shapepotential(q::Quadric, r::Vector{Float64})
+    return ([r; 1]'*q.Q*[r; 1])
+end
+
+function normal_grad(q::Quadric, r::Vector{Float64})
+
+    n = gradient(p -> shapepotential(q, p), r)[1]
+    return n/norm(n)
+end
+
 @doc raw"""
     changerepresentation(q::Quadric)
 

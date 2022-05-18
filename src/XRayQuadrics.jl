@@ -2,7 +2,7 @@
 module XRayQuadrics
 
 using Distributed, DistributedArrays
-using LinearAlgebra
+using LinearAlgebra, Zygote
 using Random
 import JSON, HDF5, CSV, DataFrames
 using Colors
@@ -10,6 +10,7 @@ using Plots
 
 export Particle, PixelatedAttenuator
 export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, normal, changerepresentation
+export shapepotential, normal_grad
 export in_out
 export PlotTruncatedQuadric, convert_arguments, cartesian_grid, get_mesh, plot, plot!
 export bin
