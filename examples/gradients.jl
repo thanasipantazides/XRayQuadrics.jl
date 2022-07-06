@@ -1,5 +1,5 @@
 using XRayQuadrics
-using LinearAlgebra
+using LinearAlgebra, StaticArrays
 using Profile
 
 axis = [0;0;1]
@@ -23,7 +23,7 @@ qh = Quadric(h)
 randv = rand(3)
 randv = randv/norm(randv)
 
-r = R*(randv×axis)/norm(randv×axis)
+r = SVector{3}(R*(randv×axis)/norm(randv×axis))
 
 @time nd = normal(qc, r)
 @time ng = normal_grad(qc, r)

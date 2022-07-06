@@ -213,12 +213,27 @@ function TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64}, 
     return TruncatedQuadric(q, [p1, p2], caps)
 end
 
-function shapepotential(q::Quadric, r::Vector{Float64})
-    return ([r; 1]'*q.Q*[r; 1])
+function shapepotential(s::Plane, r::Vector{Float64})
+    return s.a'*r + s.c'*r
 end
 
-function normal_grad(q::Quadric, r::Vector{Float64})
+function shapepotential(s::Cylinder, r::Vector{Float64})
+    return s.R^2 + (s.a'*(r - s.c))^2 - (r - s.c)'*(r - s.c)
+end
 
+function shapepotential(s::Paraboloid, r::Vector{Float64})
+    return s.b^2*(s.a'*(r - s.c)) + (s.a'*(r - s.c))^2 - (r - s.c)'*(r - s.c)
+end
+
+function shapepotential(s::Hyperboloid, r::Vector{Float64})
+    return s.R^2*(1 + 1/s.b^2*(s.a'*(r - s.c))^2) + (s.a'*(r - s.c))^2 - (r - s.c)'*(r - s.c)
+end
+
+function shapepotential(q::Quadric, r::Vector{Float64})
+    return [r; 1]'*q.Q*[r; 1]
+end
+
+function normal_grad(q::Union{Quadric, Plane, Cylinder, Hyperboloid, Paraboloid}, r::Vector{Float64})
     n = gradient(p -> shapepotential(q, p), r)[1]
     return n/norm(n)
 end
