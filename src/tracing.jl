@@ -76,7 +76,7 @@ end
     interacts(p::Particle, tq::TruncatedQuadric)
 
 !!! warning
-    FINISH IMPLEMENTING: should return a copy of `p` and a probability (of reflection or transmission, depending on ) 
+    FINISH IMPLEMENTING: should return a reflected/transmitted copy of `p` and a probability (of reflection or transmission, depending on whether `tq` is a mirror or not) 
 """
 function interacts(p::Particle, tq::TruncatedQuadric)
     quadric = tq.q
