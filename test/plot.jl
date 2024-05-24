@@ -86,7 +86,7 @@ for i = 1:nray
     dir = rand(3,) - 0.5*ones(3,)
     dir = dir/norm(dir)
     rays[i] = Particle(center + 1*ax, dir, 10)
-
+    
     (cin, cout) = in_out(rays[i], qc)
     (pin, pout) = in_out(rays[i], qp)
     (hin, hout) = in_out(rays[i], qh)
