@@ -263,7 +263,11 @@ function changerepresentation(q::Quadric)
  
         elseif rank(q.Q) == 3
             # cylinder
-            c = (-Qr)\qd
+            # c = (-Qr)\qd
+            (U,S,V) = svd(Qr)
+            invS = zeros(length(S))
+            [invS[i] = 1/el for (i,el) in enumerate(S) if el != 0]
+            c = -V'*(diagm(invS)')*U' * qd
             badI = findfirst(isnan.(c) .| isinf.(c))
             if !isnothing(badI)
                 c[badI] = 1.0

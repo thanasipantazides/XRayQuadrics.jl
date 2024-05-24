@@ -72,6 +72,81 @@ function in_out(p::Particle, q::Quadric)
     # end
 end
 
+function in_out_diagonalize(c::Float64, pblock::Matrix, Vblock::Matrix, Qblock::Matrix)
+    
+end
+
+"""
+    intersect_photons_with_quadrics(p::Array{Particle}, tq::TruncatedQuadric) 
+
+Computes intersection positions of a set of photons with a set of surfaces.
+"""
+function intersect_photons_with_quadrics(p::Vector{Particle}, tq::Vector{TruncatedQuadric})
+    n_surfaces = length(tq)
+    n_photons = length(p)
+
+    # matrix structure: grouped by surface (not grouped by photon)
+
+    γ = zeros(n_photons*n_surfaces)
+    q = zeros(n_photons*n_surfaces, n_photons*n_surfaces)
+    for i in 1:length(q[1,:])
+        # γ[i] = p[i]
+        for j in 1:length(q[:,1])
+
+        end
+    end
+end
+
+"""
+    build_tracing_geometry(p::Vector{Particle}, tq::Vector{TruncatedQuadric})
+
+Builds generic matrix-vector quadratic terms `A`, `b`, `c` from provided `Quadric` surfaces and ray data.
+"""
+function build_tracing_geometry(p::Vector{Particle}, tq::Vector{TruncatedQuadric})
+
+end
+
+"""
+    solve_quadratic(A::Array, b::Vector, c::Real)
+
+Solves quadratic matrix-vector equation. Returns two solution vectors `x` to `x'*A*x + b'*x + c = 0`.
+"""
+function solve_quadratic(A::Array, b::Vector, c::Real)
+    # check `A` symmetric
+    is_symmetric = A == A'
+
+    # check size of `b`
+    if length(b) != length(A[:,1])
+        error("matrix and vector must have same length")
+    end
+
+    # check if `A` is invertible:
+    use_pseudo_inverse = rank(A) != length(A[:,1])
+
+    # complete the square parameters:
+    Ainv = zeros(length(A[:,1]), length(A[1,:]))
+    if use_pseudo_inverse
+        Ainv = pinv(A)
+    else
+        Ainv = inv(A)
+    end
+    h = -0.5*Ainv*b
+    k = c - 0.25*b'*Ainv*b
+
+    # diagonalize A:
+    (Λ, V) = eigen(A)
+
+    # get solutions in principal axes space
+    zp = sqrt.(-k ./ Λ)
+    zn = -zp
+
+    # transform solutions back to original space
+    xp = inv(V)*zp + h
+    xn = inv(V)*zn + h
+
+    return (xp, xn)
+end
+
 """
     interacts(p::Particle, tq::TruncatedQuadric)
 

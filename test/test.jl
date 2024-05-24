@@ -31,7 +31,7 @@ vc = eigvecs(qc.Q[1:3,1:3])
 vh = eigvecs(qh.Q[1:3,1:3])
 vp = eigvecs(qp.Q[1:3,1:3])
 
-classify(qc)
+# classify(qc)
 
 ax = [1;1;1]
 ax = ax/norm(ax)

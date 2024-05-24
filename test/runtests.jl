@@ -20,6 +20,11 @@ tqp = changerepresentation(qp)
 
 sray = Particle([0;0;0],[1;1;1],10e3)
 
+n = 10
+solA = rand(n,n)
+solb = rand(n)
+solc = 10
+
 @testset "XRayQuadrics.jl" begin
     # Write your tests here.
     # test boolean expressions with @test
@@ -56,5 +61,32 @@ sray = Particle([0;0;0],[1;1;1],10e3)
 
     @testset "normal vectors" begin
         
+    end
+
+    @testset "quadratic solution" begin
+        cyl = Cylinder(1, [1;1;1], [0;0;1])
+        qcyl = Quadric(cyl)
+        
+        cylA = qcyl.Q[1:3,1:3]
+        cylb = qcyl.Q[1:3,4]
+        cylc = qcyl.Q[4,4]
+
+        r0 = [-10;1;1]
+        v0 = [1;0;0]
+
+        V = [v0 zeros(3,1); 
+                zeros(3,1) v0]
+        p = [r0;r0]
+        Q = [cylA zeros(3,3);
+        zeros(3,3) cylA]
+        solA = V'*Q*V
+        solb = 2*Q*V
+
+        solc = p'*Q*p - 2*cylc
+        (xint1, xint2) = solve_quadratic(solA,solb,solc)
+
+        println(xint1, xint2)
+        
+        # (x1, x2) = solve_quadratic(solA,solb,solc)
     end
 end
