@@ -63,6 +63,49 @@ solc = 10
         
     end
 
+    @testset "block properties" begin
+        cyls = [
+            Cylinder(1.0, [1;1;1], [0;0;1]),
+            Cylinder(2.0, [1;1;1], [0;0;1]),
+            Cylinder(3.0, [1;1;1], [0;0;1]),
+            Cylinder(4.0, [1;1;1], [0;0;1]),
+            Cylinder(5.0, [1;1;1], [0;0;1])
+        ]
+        n = length(cyls)
+        qs = Vector{Quadric}(undef, n)
+        
+        bigQ = zeros(n*4, n*4)
+        bigV = zeros(n*4, n)
+        bigP = zeros(n*4, 1)
+        v = [1;2;3;0]
+        v = v/norm(v)
+        p = [8;4;32;1]
+
+        for (i,cyl) in enumerate(cyls)
+            qs[i] = Quadric(cyl)
+            bigI = (i - 1)*4 + 1
+            bigQ[bigI:bigI+3, bigI:bigI+3] = qs[i].Q
+            bigV[bigI:bigI+3, i] = v
+            bigP[bigI:bigI+3] = p
+        end
+
+        quadblock = bigV'*bigQ*bigV
+        linblock = 2*bigP'*bigQ*bigV
+        
+        # display(bigQ)
+        
+        # display(eigvals(bigQ))
+        println("Q rank deficiency: ",rank(bigQ) - 5*4)
+        println("Q pinv deficiency: ",rank(pinv(bigQ)) - 5*4)
+        println("V'QV")
+        display(quadblock)
+        display(pinv(quadblock))
+        println("V'QV rank deficiency: ",rank(quadblock) - 5)
+        println("V'QV pinv deficiency: ",rank(pinv(quadblock)) - 5)
+        println("(V'QV)^-1 QV")
+        display(pinv(quadblock)*linblock')
+
+    end
     @testset "quadratic solution" begin
         cyl = Cylinder(1, [1;1;1], [0;0;1])
         qcyl = Quadric(cyl)
@@ -83,9 +126,9 @@ solc = 10
         solb = 2*Q*V
 
         solc = p'*Q*p - 2*cylc
-        (xint1, xint2) = solve_quadratic(solA,solb,solc)
+        # (xint1, xint2) = solve_quadratic(solA,solb,solc)
 
-        println(xint1, xint2)
+        # println(xint1, xint2)
         
         # (x1, x2) = solve_quadratic(solA,solb,solc)
     end

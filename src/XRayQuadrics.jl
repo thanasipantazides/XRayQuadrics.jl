@@ -6,12 +6,14 @@ using LinearAlgebra, SparseArrays
 using Random
 import JSON, HDF5, CSV, DataFrames
 using Colors
-using Plots
+using GLMakie
 
 export Particle, PixelatedAttenuator
-export Quadric, Plane, Cylinder, Paraboloid, Hyperboloid, TruncatedQuadric, normal, changerepresentation
+export Quadric, Plane, Cylinder, Cone, Ellipsoid, Paraboloid, Hyperboloid, TruncatedQuadric, normal, changerepresentation
 export in_out, solve_quadratic
-export PlotTruncatedQuadric, convert_arguments, cartesian_grid, get_mesh, plot, plot!
+export convert_arguments, cartesian_grid, get_mesh, plot, plot!
+export Parabola, Hyperbola
+export fitp, fith, focus
 export bin
 export get_reflection_data
 

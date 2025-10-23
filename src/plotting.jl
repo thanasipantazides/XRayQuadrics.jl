@@ -1,5 +1,6 @@
 using XRayQuadrics
-using Plots
+# import Makie: plot, plot!
+using GLMakie
 using Colors
 
 # macro expands to:
@@ -48,41 +49,74 @@ using Colors
 #     return plot
 # end
 
-Plots.@recipe function f(tq::TruncatedQuadric; plot_caps = false)
-    # color       --> :blue
-    seriesalpha --> 0.667
-    seriestype  :=  :surface
-    legend      --> false
-    # markershape --> (add_marker ? :circle : :none)
-    delete!(plotattributes, :add_marker)
-    (X, Y, Z) = cartesian_grid(tq)
-    @series begin
-        seriestype  := :surface
-        legend      --> false
-        X[1], Y[1], Z[1]
-    end
-    # if plot_caps
-        @series begin
-            seriestype  := :surface
-            legend      --> false
-            X[2], Y[2], Z[2]
-        end
-        @series begin
-            seriestype  := :surface
-            legend      --> false
-            X[3], Y[3], Z[3]
-        end
-    # end
+# Plots.@recipe function f(tq::TruncatedQuadric; plot_caps = false)
+#     # color       --> :blue
+#     seriesalpha --> 0.667
+#     seriestype  :=  :surface
+#     legend      --> false
+#     # markershape --> (add_marker ? :circle : :none)
+#     delete!(plotattributes, :add_marker)
+#     (X, Y, Z) = cartesian_grid(tq)
+#     @series begin
+#         seriestype  := :surface
+#         legend      --> false
+#         X[1], Y[1], Z[1]
+#     end
+#     # if plot_caps
+#         @series begin
+#             seriestype  := :surface
+#             legend      --> false
+#             X[2], Y[2], Z[2]
+#         end
+#         @series begin
+#             seriestype  := :surface
+#             legend      --> false
+#             X[3], Y[3], Z[3]
+#         end
+#     # end
+# end
+
+# @Makie.recipe(TruncatedQuadricPlot, tq) do scene
+#     Theme(;
+#         color = :red,
+#     )
+# end
+
+# function Makie.plot!(tq_plot::TruncatedQuadricPlot{<:Tuple{TruncatedQuadric}})
+#     println("Makie.plot!(tq_data::TruncatedQuadricPlot) ran.")
+
+#     (X, Y, Z) = cartesian_grid(tq_plot[:tq])
+
+#     surface!(tq_plot, X, Y, Z)
+
+#     return tq_plot
+# end
+
+# function plot(ax::Makie.LScene, tq::TruncatedQuadric)
+#     (X, Y, Z) = cartesian_grid(tq)
+
+#     surface!(ax, X, Y, Z)
+# end
+
+function plot!(ax::Makie.LScene, tq::TruncatedQuadric)
+    (X, Y, Z, T) = cartesian_grid(tq)
+
+    colors = Dict(Paraboloid=> :green, Hyperboloid=> :blue, Cylinder=> :red, Cone=> :yellow, Ellipsoid=> :magenta)
+
+    surface!(
+        ax, 
+        X[1], Y[1], Z[1],
+        colorrange=(-30, -20),
+        highclip=(colors[T], 0.5),
+        transparency=true
+    )
 end
-
-
-
 
 
 function cartesian_grid(tq::TruncatedQuadric)
     q = tq.q
     ps = tq.p
-    s = changerepresentation(q) 
+    s = changerepresentation(q)
     T = typeof(s)
 
     (nθ, nζ) = (30, 100)
@@ -90,10 +124,10 @@ function cartesian_grid(tq::TruncatedQuadric)
     X = Xs[1]
     Y = Ys[1]
     Z = Zs[1]
-    return (Xs, Ys, Zs)
+    return (Xs, Ys, Zs, T)
 end
 
-function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}, nθ::Int64, nζ::Int64)
+function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid, Cone, Ellipsoid}, ps::Vector{Plane}, nθ::Int64, nζ::Int64)
 
     ca1 = axis_plane_intersection(s, ps[1])
     ca2 = axis_plane_intersection(s, ps[2])
@@ -109,6 +143,8 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
     # ζ = range(0, stop=h, length=nζ)
     ζ = range(h1, stop=h2, length=nζ)
 
+    # todo: bound ζ so that it conforms to shape boundary (nonimaginary)
+
     X = zeros(nθ, nζ)
     Y = zeros(nθ, nζ)
     Z = zeros(nθ, nζ)
@@ -119,6 +155,25 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
             for j in 1:nζ
                 X[i,j] = R*cos(θ[i])
                 Y[i,j] = R*sin(θ[i])
+                Z[i,j] = ζ[j]
+            end
+        end
+    elseif typeof(s) == Cone
+        h = s.h
+        for i in 1:nθ
+            for j in 1:nζ
+                X[i,j] = 1/h*ζ[j]*cos(θ[i])
+                Y[i,j] = 1/h*ζ[j]*sin(θ[i])
+                Z[i,j] = ζ[j]
+            end
+        end
+    elseif typeof(s) == Ellipsoid
+        d = s.d
+        e = s.e
+        for i in 1:nθ
+            for j in 1:nζ
+                X[i,j] = d*cos(θ[i])*sin(acos(ζ[j]/h2))
+                Y[i,j] = d*sin(θ[i])*sin(acos(ζ[j]/h2))
                 Z[i,j] = ζ[j]
             end
         end
@@ -158,7 +213,7 @@ function get_mesh(s::Union{Cylinder, Paraboloid, Hyperboloid}, ps::Vector{Plane}
     return ((X,Xc1,Xc2), (Y,Yc1,Yc2), (Z,Zc1,Zc2))
 end
 
-function axis_plane_intersection(s::Union{Cylinder, Paraboloid, Hyperboloid}, p::Plane)
+function axis_plane_intersection(s::Union{Cylinder, Paraboloid, Hyperboloid, Cone, Ellipsoid}, p::Plane)
     # project plane points onto axis
     ca = s.c + (p.a'*p.c - p.a'*s.c)/(p.a'*s.a)*s.a
     return ca
