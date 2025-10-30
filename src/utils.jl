@@ -1,4 +1,4 @@
-import HDF5
+import HDF5, CSV
 
 function get_reflection_data(file::String)
     fid = HDF5.h5open(file, "r")
@@ -11,6 +11,67 @@ function get_reflection_data(file::String)
     keydata = cat([0.0 energy'], keydata, dims=1)
 
     return keydata
+end
+
+@doc raw"""
+    function get_photon_data(file::String)
+        
+Return a Matrix 
+"""
+function get_photon_data(file::String)
+    data = CSV.File(file, header=true)
+    
+    energies = []
+    angles = []
+    for row in data
+        push!(energies, row[3])
+        push!(angles, row[2])
+    end
+    
+    return Dict("energies" => energies, "angles" => angles)
+end
+
+function get_mass_attenuation_data(file::String)
+    data = CSV.File(file, header=true)
+    
+    energies = []
+    attenuations = []
+    for row in data
+        push!(energies, row[1])
+        push!(attenuations, row[2])
+    end
+    
+    return Dict("energies" => energies, "attenuations" => attenuations)
+end
+
+function get_empirical_attenuation_data(file::String)
+    data = CSV.File(file, header=true)
+    energies = []
+    modeled_attenuations = []
+    measured_attenuations = []
+    for row in data
+        push!(energies, row[1])
+        push!(modeled_attenuations, row[3])
+        push!(measured_attenuations, row[2])
+    end
+    return Dict("energies" => energies, "measured_attenuations" => measured_attenuations, "modeled_attenuations" => modeled_attenuations)
+end
+
+function interpolateattenuation(E::T, table::Dict{String, Vector{Any}}; level=0) where T<:Real
+    if level == 0 && (E >= table["energies"][end] || E < table["energies"][1])
+        @error "looking up energy outside bounds!"
+        println(E)
+        return
+    end
+    
+    lower_k = findlast(x -> x <= E, table["energies"])
+    upper_k = lower_k + 1
+    
+    cE = table["attenuations"][lower_k] + (table["attenuations"][upper_k] - table["attenuations"][lower_k])*(E - table["energies"][lower_k]) / (table["energies"][upper_k] - table["energies"][lower_k])
+    
+    # cE = table[lower_k,2] + (table[upper_k,2] - table[lower_k,2])*(E - table[lower_k, 1]) / (table[upper_k, 1] - table[lower_k, 1])
+
+    return cE
 end
 
 struct Parabola{T}
@@ -83,4 +144,22 @@ function focus(object::Union{Parabola, Hyperbola})
     if typeof(object) === Hyperbola
 
     end
+end
+
+function LinearAlgebra.cross(x::AbstractVector)
+    if length(x) > 3
+        throw(Exception("too long!"))
+    end
+
+    return [0 -x[3] x[2];
+        x[3] 0 -x[1];
+        -x[2] x[1] 0]
+end
+
+function randr()::Matrix{<:Real}
+    ax = rand(3) .- 0.5
+    ax = ax / norm(ax)
+    cang = 2*rand() - 1
+
+    return I * cang + (1 - cang) * ax * ax' + cross(ax) * sqrt(1 - cang^2)
 end

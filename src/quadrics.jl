@@ -364,16 +364,26 @@ function changerepresentation(q::Quadric)
  
         elseif rank(q.Q) == 3
             # cylinder
-            # c = (-Qr)\qd
-            (U,S,V) = svd(Qr)
-            invS = zeros(length(S))
-            [invS[i] = 1/el for (i,el) in enumerate(S) if el != 0]
-            c = -V'*(diagm(invS)')*U' * qd
-            badI = findfirst(isnan.(c) .| isinf.(c))
-            if !isnothing(badI)
-                c[badI] = 1.0
+            c = -pinv(Qr)*qd
+            # try
+            #     # c = (-Qr)\qd
+            # catch SingularException
+            #     (U,S,V) = svd(Qr)
+            #     invS = zeros(length(S))
+            #     [invS[i] = 1/el for (i,el) in enumerate(S) if el != 0]
+            #     c = -V'*(diagm(invS)')*U' * qd
+            #     badI = findfirst(isnan.(c) .| isinf.(c))
+            #     if !isnothing(badI)
+            #         c[badI] = 1.0
+            #     end
+            # end
+            
+            disc = q0 - c'*Qr*c
+            if disc < 0
+                @warn "found discriminant < 0 in Cylinder conversion!"
+                disc = 0
             end
-            R = sqrt(q0 - c'*Qr*c)
+            R = real(sqrt(disc))
             return Cylinder(R, c, a)
  
         else
@@ -486,6 +496,40 @@ Returns normal vector to a `Hyperboloid` at position `r` on the surface.
 function normal(s::Hyperboloid, r::Vector{Float64})
     n = 2*((1 + s.R^2/s.b^2)*s.a - (r - s.c)./norm(r - s.c))
     return n/norm(n)
+end
+
+function inside(s1::Plane, s2::Plane, u::AbstractVector)
+    # check if the vector lies between two parallel planes
+    if norm(s1.a'*s2.a) != 1
+        @warn "planes must be parallel!"
+        # return false
+    end
+    
+    cs1 = s1.a'*s1.c
+    cs2 = s2.a'*s2.c # should be identical to s1.a'*s2.c
+    csu = s1.a'*u
+    
+    minc = min(cs1, cs2)
+    maxc = max(cs1, cs2)
+    
+    if minc <= csu <= maxc
+        return true
+    else
+        return false
+    end
+end
+
+function inside(q::Quadric, u::AbstractVector)
+    uh = [u; 1]
+    if uh'*q.Q*uh <= 0
+        return false
+    else 
+        return true
+    end
+end
+
+function inside(tq::TruncatedQuadric, u::AbstractVector)
+    return inside(tq.q, u) && inside(tq.p..., u)
 end
 
 function classify(q::Quadric)

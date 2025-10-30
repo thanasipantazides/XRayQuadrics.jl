@@ -12,9 +12,9 @@ function bin(data::Vector{<:AbstractFloat}, ticks::Vector{<:AbstractFloat})
     binvals = fill([], n-1)
     bindices = fill([], n-1)
     for i = 1:n-1
-        inbin = findall((data[sortI] .≥ ticks[i]) .& (data[sortI] .< ticks[i + 1]))
+        inbin = findall(x->x>ticks[i] && x<ticks[i+1], data)
         weights[i] = length(inbin)
-        bindices[i] = sortI[inbin]  # index into original data set, not ordered set
+        bindices[i] = inbin
         binvals[i] = data[inbin]
     end
 
