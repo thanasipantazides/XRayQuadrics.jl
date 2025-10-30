@@ -1,4 +1,6 @@
 using XRayQuadrics
+using ProgressMeter
+using Distributed
 
 """
     in_out(p::Particle, q::Quadric)
@@ -289,57 +291,72 @@ end
 
 Get distances a `photon::Particle` travels within an `attenuator::PixelatedAttenuator` which has cylinders cut out of it. 
 """
-function lengthsinattenuator(photon, attenuator)
-    topcylinderstimes = Array{Float64}(undef, 0, 2)
-    # filter cylinders along path
-    hits = falses(length(attenuator.holes[:]))
-    for c = 1:length(attenuator.holes[:])
-        if norm(cross(photon.v,attenuator.holes[c].a)) == 0
-            # if cylinder parallel to ray
-            hits[c] = norm(attenuator.holes[c].c - photon.r0 - photon.v*((photon.v'*(attenuator.holes[c].c - photon.r0))./(photon.v'*photon.v))) ≤ attenuator.holes[c].R
-        else
-            # if cylinder oblique to ray
-            hits[c] = cross(photon.v, attenuator.holes[c].a)'*(photon.r0 - attenuator.holes[c].c)/norm(cross(photon.v, attenuator.holes[c].a)) ≤ attenuator.holes[c].R
-        end
+function lengthsinattenuator(photon::Particle, attenuator)
+    # topcylinderstimes = Array{Float64}(undef, 0, 2)
+    # # filter cylinders along path
+    # hits = falses(length(attenuator.holes[:]))
+    # for c = 1:length(attenuator.holes[:])
+    #     if norm(cross(photon.v, attenuator.holes[c].a)) == 0
+    #         # if cylinder parallel to ray
+    #         hits[c] = norm(attenuator.holes[c].c - photon.r0 - photon.v*((photon.v'*(attenuator.holes[c].c - photon.r0))./(photon.v'*photon.v))) ≤ attenuator.holes[c].R
+    #     else
+    #         # if cylinder oblique to ray
+    #         hits[c] = cross(photon.v, attenuator.holes[c].a)'*(photon.r0 - attenuator.holes[c].c)/norm(cross(photon.v, attenuator.holes[c].a)) ≤ attenuator.holes[c].R
+    #     end
         
-        # if this photon flies within this cylinder's radius, check for collision
-        if hits[c]
-            (tin, tout) = cylinderentryexit(photon, attenuator.holes[c])
+    #     # if this photon flies within this cylinder's radius, check for collision
+    #     if hits[c]
+    #         (tin, tout) = cylinderentryexit(photon, attenuator.holes[c])
 
-            # make sure it actually hits cylinder
-            if tout - tin > 0
-                topcylinderstimes = cat(topcylinderstimes, [tin tout], dims=1)
-            end
-        end
+    #         # make sure it actually hits cylinder
+    #         if tout - tin > 0
+    #             topcylinderstimes = cat(topcylinderstimes, [tin tout], dims=1)
+    #         end
+    #     end
+    # end
+    
+    # # sort cylinders visited in order of visit time (increasing distance from r0 along v)
+    # sortedcylinderstimes = zeros(size(topcylinderstimes))
+    # if length(topcylinderstimes[:,1]) > 1
+    #     topcylinderorder = sortperm(topcylinderstimes[:,1])
+    #     sortedcylinderstimes = topcylinderstimes[topcylinderorder,:]
+    # else
+    #     sortedcylinderstimes = topcylinderstimes
+    # end
+    
+    # # times at which photon hits attenuator top surface and bottom surface
+    # tslabbottom = (attenuator.bottompoint'*attenuator.normal - photon.r0'*attenuator.normal)/(photon.v'*attenuator.normal)
+    # tslabtop = (attenuator.toppoint'*attenuator.normal - photon.r0'*attenuator.normal)/(photon.v'*attenuator.normal)
+
+    # tslabin = min(tslabbottom, tslabtop)
+    # tslabout = max(tslabbottom, tslabtop)
+
+    # if length(sortedcylinderstimes) > 0
+    #     # times spent within attenuator material (complement of time spent in cylinders)
+    #     timediffs = [sortedcylinderstimes[:,1]; tslabout] - [tslabin; sortedcylinderstimes[:,2]]
+    # else
+    #     timediffs = tslabout - tslabin
+    # end
+
+    # # path lengths in material
+    # lengths = norm(photon.v).*timediffs
+
+    # return lengths
+    
+    # lengths = zeros()
+    
+    ptop = Plane(attenuator.toppoint, attenuator.normal)
+    pbot = Plane(attenuator.bottompoint, attenuator.normal)
+    ttop = interactiontimes(ptop, photon)
+    tbot = interactiontimes(pbot, photon)
+    OAL = norm(tbot - ttop)
+    within = OAL
+    for (k,cyl) in enumerate(attenuator.holes)
+        Lcyl = interactionlength(cyl,photon)
+        within -= Lcyl
     end
     
-    # sort cylinders visited in order of visit time (increasing distance from r0 along v)
-    sortedcylinderstimes = zeros(size(topcylinderstimes))
-    if length(topcylinderstimes[:,1]) > 1
-        topcylinderorder = sortperm(topcylinderstimes[:,1])
-        sortedcylinderstimes = topcylinderstimes[topcylinderorder,:]
-    else
-        sortedcylinderstimes = topcylinderstimes
-    end
-    
-    # times at which photon hits attenuator top surface and bottom surface
-    tslabbottom = (attenuator.bottompoint'*attenuator.normal - photon.r0'*attenuator.normal)/(photon.v'*attenuator.normal)
-    tslabtop = (attenuator.toppoint'*attenuator.normal - photon.r0'*attenuator.normal)/(photon.v'*attenuator.normal)
-
-    tslabin = min(tslabbottom, tslabtop)
-    tslabout = max(tslabbottom, tslabtop)
-
-    if length(sortedcylinderstimes) > 0
-        # times spent within attenuator material (complement of time spent in cylinders)
-        timediffs = [sortedcylinderstimes[:,1]; tslabout] - [tslabin; sortedcylinderstimes[:,2]]
-    else
-        timediffs = tslabout - tslabin
-    end
-
-    # path lengths in material
-    lengths = norm(photon.v).*timediffs
-
-    return lengths
+    return within
 end
 
 """
@@ -374,23 +391,41 @@ end
 Return the probability of a photon::Particle being transmitted through attenuator::PixelatedAttenuator.
 """
 function transmission_probability(photon, attenuator)
-    lengths = lengthsinattenuator(photon, attenuator)
-    if length(lengths) != 0
-        transmissionlikelihoods = zeros(BigFloat, length(lengths))
-        for i = 1:length(lengths)
-            # interpolate attenuation coefficients from table data:
-            attenuationcoeff = interpolateattenuation(photon.E, attenuator.massattenuation)
+    # lengths = lengthsinattenuator(photon, attenuator)
+    # if length(lengths) != 0
+    #     transmissionlikelihoods = zeros(BigFloat, length(lengths))
+    #     for i = 1:length(lengths)
+    #         # interpolate attenuation coefficients from table data:
+    #         attenuationcoeff = interpolateattenuation(photon.E, attenuator.massattenuation)
             
-            # probability of passing through material:
-            transmissionlikelihoods[i] = exp(BigFloat(-lengths[i]*attenuationcoeff))
-        end
+    #         # probability of passing through material:
+    #         transmissionlikelihoods[i] = exp(BigFloat(-lengths[i]*attenuationcoeff))
+    #     end
 
-        # get total transmission likelihood
-        return prod(transmissionlikelihoods)
+    #     # get total transmission likelihood
+    #     return prod(transmissionlikelihoods)
         
-    else
-        return 1.0
+    # else
+    #     return 1.0
+    # end
+     
+    L = lengthsinattenuator(photon, attenuator)
+    attenuationcoeff = interpolateattenuation(photon.E, attenuator.massattenuation)
+    probability = exp(BigFloat(-L*attenuationcoeff))
+    return probability
+end
+
+function batch_photons_through_attenuator(photons::Vector{Particle}, attenuator::PixelatedAttenuator)
+    
+    transmit = zeros(length(photons))
+    # transmit = @showprogress pmap(eachindex(photons)) do k
+    #     transmission_probability(photons[k], attenuator)
+    #     # pmap(k -> transmit[k] = transmission_probability(photons[k], attenuator), eachindex(photons))
+    # end
+    @showprogress desc = "tracing photons...\t" for (k,p) in enumerate(photons)
+        transmit[k] = transmission_probability(p, attenuator)
     end
+    return transmit
 end
 
 """
@@ -421,8 +456,9 @@ function batch_photons(photons, attenuator)
         # shape array so each worker gets one column
         inphotons = reshape(inphotons, batchsize, nworkers())
         # make distributed array for result on all workers
-        transmitlikelihood = dzeros(BigFloat, size(inphotons), workers(), [1, nworkers()])
+        transmitlikelihood = zeros(BigFloat, size(inphotons), workers(), [1, nworkers()])
 
+        stime = time()
         @sync @distributed for j in 1:nworkers()
             localtransmitlikelihood = localpart(transmitlikelihood)
             locali = DistributedArrays.localindices(transmitlikelihood)
@@ -431,15 +467,18 @@ function batch_photons(photons, attenuator)
                 localtransmitlikelihood[i] = transmission_probability(inphotons[i,locali[2][1]], attenuator)
             end
         end
+        println("total time (parallel): ", time() - stime)
 
         return Array(transmitlikelihood[1:(end - spares)])
 
     else
+        println("Found no worker processes, defaulting to serial.")
         transmitlikelihood = zeros(size(photons))
-
+        stime = time()
         @inbounds for i = 1:length(photons)
             transmitlikelihood[i] = transmission_probability(photons[i], attenuator)
         end
+        println("total time (serial): ", time() - stime)
         return transmitlikelihood
     end
 end

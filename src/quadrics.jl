@@ -36,6 +36,43 @@ struct Cylinder
 end
 
 """
+    Cone(h::Float64, c::Vector{Float64}, a::Vector{Float64})
+
+Construct a `Cone` with expansion `h` and unit axis `a` which passes through point `c`.
+"""
+struct Cone
+    h::Real          # expansion rate (slope)
+    c::Vector{Float64}  # center point
+    a::Vector{Float64}  # axis (unit) (NOTE: c + h*a yields a point on the opposite cap => this is an inward normal axis)
+    Cone(h,c,a) = begin
+        if length(c) != 3 || length(a) != 3
+            error("3-vectors please")
+        else
+            new(h,c,a/norm(a))
+        end
+    end
+end
+
+"""
+    Ellipsoid(b::Float64, c::Vector{Float64}, a::Vector{Float64})
+
+Construct a `Ellipsoid` at vertex `c` with semimajor axis `d`, semiminor axis `e`, and unit axis `a`.
+"""
+struct Ellipsoid
+    d::Real
+    e::Real
+    c::Vector{Float64}
+    a::Vector{Float64}
+    Ellipsoid(d,e,c,a) = begin
+        if length(c) != 3 || length(a) != 3
+            error("3-vectors please")
+        else
+            new(d,e,c,a/norm(a))
+        end
+    end
+end
+
+"""
     Paraboloid(b::Float64, c::Vector{Float64}, a::Vector{Float64})
 
 Construct a `Paraboloid` at vertex `c` with growth rate `b` and unit axis `a`.
@@ -80,9 +117,10 @@ Construct a `Quadric` surface from a 4x4 symmetric quadric matrix.
 struct Quadric
     Q::Matrix{Float64}
     Quadric(Q) = begin
-        if issymmetric(Q)
+        if sum(Q' - Q) < 1e-15 # new symmetry condition. Old was too restrictive.
             new(Q)
         else
+            println(Q)
             error("quadric matrix must be symmetric")
         end
     end
@@ -139,6 +177,36 @@ function Quadric(s::Cylinder)
 end
 
 @doc raw"""
+    Quadric(s::Cone)
+
+Construct a `Quadric` from a `Cone` (which has attributes axis = `a` = ``\boldsymbol{a}``; point on axis = `c` = ``\boldsymbol{c}``; and slope = `h` = ``h``) using the definitions:
+
+``\boldsymbol{Q}_r = (1+h^2)\boldsymbol{a}\boldsymbol{a}^\mathsf{T} - \boldsymbol{1}``
+
+``\boldsymbol{Q}_c = \begin{bmatrix} \boldsymbol{Q}_r & -\boldsymbol{Q}_r\boldsymbol{c} \\ -\boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r & \boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r\boldsymbol{c} \end{bmatrix}``
+"""
+function Quadric(s::Cone)
+    Q = [(1+s.h^2)*s.a*s.a' - I            (I - (1+s.h^2)*s.a*s.a')*s.c;
+         ((I - (1+s.h^2)*s.a*s.a')*s.c)'   s.c'*((1+s.h^2)*s.a*s.a' - I)*s.c]
+    return Quadric(Q)
+end
+
+@doc raw"""
+    Quadric(s::Ellipsoid)
+
+Construct a `Quadric` from a `Ellipsoid` (which has attributes axis = `a` = ``\boldsymbol{a}``; point on axis = `c` = ``\boldsymbol{c}``; semimajor axis length = `d` = ``d``; and semiminor axis length = `e` = ``e``) using the definitions:
+
+``\boldsymbol{Q}_r = \bigg(1 - \frac{e^2}{d^2} \bigg)\boldsymbol{a}\boldsymbol{a}^\mathsf{T} - \boldsymbol{1}``
+
+``\boldsymbol{Q}_p = \begin{bmatrix} \boldsymbol{Q}_r & -\boldsymbol{Q}_r\boldsymbol{c} \\ -\boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r & e^2 + \boldsymbol{c}^\mathsf{T}\boldsymbol{Q}_r\boldsymbol{c} \end{bmatrix}``
+"""
+function Quadric(s::Ellipsoid)
+    Q = [(1-(s.e/s.d)^2)*s.a*s.a' - I   (I - (1-(s.e/s.d)^2)*s.a*s.a')*s.c;
+         ((I - (1-(s.e/s.d)^2)*s.a*s.a')*s.c)'    s.e^2 + s.c'*((1-(s.e/s.d)^2)*s.a*s.a' - I)*s.c]
+    return Quadric(Q)
+end
+
+@doc raw"""
     Quadric(s::Paraboloid)
 
 Construct a `Quadric` from a `Paraboloid` (which has attributes axis = `a` = ``\boldsymbol{a}``; point on axis = `c` = ``\boldsymbol{c}``; and quadratic parameter = `b` = ``b``) using the definitions:
@@ -179,6 +247,20 @@ Construct a `TruncatedQuadric` surface from a `Cylinder` and set of `Plane`s by 
 TruncatedQuadric(s::Cylinder, p::Vector{Plane}, caps=true) = TruncatedQuadric(Quadric(s), p, caps)
 
 """
+    TruncatedQuadric(s::Cone, p::Vector{Plane}, caps=true)
+
+Construct a `TruncatedQuadric` surface from a `Cone` and set of `Plane`s by converting `Cone` directly to a `Quadric`.
+"""
+TruncatedQuadric(s::Cone, p::Vector{Plane}, caps=true) = TruncatedQuadric(Quadric(s), p, caps)
+
+"""
+    TruncatedQuadric(s::Ellipsoid, p::Vector{Plane}, caps=true)
+
+Construct a `TruncatedQuadric` surface from an `Ellipsoid` and set of `Plane`s by converting `Cone` directly to a `Quadric`.
+"""
+TruncatedQuadric(s::Ellipsoid, p::Vector{Plane}, caps=true) = TruncatedQuadric(Quadric(s), p, caps)
+
+"""
     TruncatedQuadric(s::Paraboloid, p::Vector{Plane}, caps=true)
 
 Construct a `TruncatedQuadric` surface from a `Paraboloid` and set of `Plane`s by converting `Paraboloid` directly to a `Quadric`.
@@ -210,6 +292,8 @@ function TruncatedQuadric(q::Quadric, h1::Vector{Float64}, h2::Vector{Float64}, 
         error("h1, h2 must lie on Quadric axis")
     end
 
+    # todo: should also check that h1 and h2 actually slice the shape.
+
     return TruncatedQuadric(q, [p1, p2], caps)
 end
 
@@ -235,14 +319,31 @@ function changerepresentation(q::Quadric)
         return Plane(c, a)
         
     elseif all(abs.(E) .>= ε)
-        # hyperboloid
+        c = (-Qr)\qd                # center of shape
         v = eigvecs(Qr)
         a = v[:,end]                # axis is eigenvector for largest eigenvalue
-        c = (-Qr)\qd                # center of hyperboloid
-        γ = tr(Qr + I)              # Qr = γ*a*a' - I, and trace(a*a') == 1
-        R = sqrt(q0 - c'*Qr*c)      # q0 = sum(c*c' .* Qr) + R^2
-        b = 1/sqrt(γ - 1)*R         # γ = 1 + (R/b)^2
-        return Hyperboloid(R, b, c, a)
+        
+        # hyperboloid or cone?
+        if abs(q0 + c'*qd) <= ε
+            # a cone
+            h = sqrt(tr(Qr + I) - 1)
+            Cone(h, c, a)
+        else
+            # a hyperboloid or ellipsoid
+            R = sqrt(q0 - c'*Qr*c)      # q0 = sum(c*c' .* Qr) + tail^2
+            γ = tr(Qr + I)              # Qr = γ*a*a' - I, and trace(a*a') == 1
+            # todo: careful here about 2-sheet hyperboloids. Confirm.
+            if γ < 1
+                # ellipsoid
+                e = R
+                d = 1/sqrt(γ + 1)*e
+                return Ellipsoid(d,e,c,a)
+            else
+                # a hyperboloid
+                b = 1/sqrt(γ - 1)*R         # γ = 1 + (R/b)^2
+                return Hyperboloid(R, b, c, a)
+            end
+        end
 
     else
         v = eigvecs(Qr)
@@ -263,16 +364,26 @@ function changerepresentation(q::Quadric)
  
         elseif rank(q.Q) == 3
             # cylinder
-            # c = (-Qr)\qd
-            (U,S,V) = svd(Qr)
-            invS = zeros(length(S))
-            [invS[i] = 1/el for (i,el) in enumerate(S) if el != 0]
-            c = -V'*(diagm(invS)')*U' * qd
-            badI = findfirst(isnan.(c) .| isinf.(c))
-            if !isnothing(badI)
-                c[badI] = 1.0
+            c = -pinv(Qr)*qd
+            # try
+            #     # c = (-Qr)\qd
+            # catch SingularException
+            #     (U,S,V) = svd(Qr)
+            #     invS = zeros(length(S))
+            #     [invS[i] = 1/el for (i,el) in enumerate(S) if el != 0]
+            #     c = -V'*(diagm(invS)')*U' * qd
+            #     badI = findfirst(isnan.(c) .| isinf.(c))
+            #     if !isnothing(badI)
+            #         c[badI] = 1.0
+            #     end
+            # end
+            
+            disc = q0 - c'*Qr*c
+            if disc < 0
+                @warn "found discriminant < 0 in Cylinder conversion!"
+                disc = 0
             end
-            R = sqrt(q0 - c'*Qr*c)
+            R = real(sqrt(disc))
             return Cylinder(R, c, a)
  
         else
@@ -295,6 +406,20 @@ changerepresentation(s::Plane) = Quadric(s)
 Convert a `Cylinder` to `Quadric` representation via the `Quadric(s::Cylinder)` constructor.
 """
 changerepresentation(s::Cylinder) = Quadric(s)
+
+"""
+    changerepresentation(s::Cone)
+
+Convert a `Cone` to `Quadric` representation via the `Quadric(s::Cone)` constructor.
+"""
+changerepresentation(s::Cone) = Quadric(s)
+
+"""
+    changerepresentation(s::Ellisoid)
+
+Convert a `Ellipsoid` to `Quadric` representation via the `Quadric(s::Ellipsoid)` constructor.
+"""
+changerepresentation(s::Ellipsoid) = Quadric(s)
 
 """
     changerepresentation(s::Paraboloid)
@@ -371,6 +496,40 @@ Returns normal vector to a `Hyperboloid` at position `r` on the surface.
 function normal(s::Hyperboloid, r::Vector{Float64})
     n = 2*((1 + s.R^2/s.b^2)*s.a - (r - s.c)./norm(r - s.c))
     return n/norm(n)
+end
+
+function inside(s1::Plane, s2::Plane, u::AbstractVector)
+    # check if the vector lies between two parallel planes
+    if norm(s1.a'*s2.a) != 1
+        @warn "planes must be parallel!"
+        # return false
+    end
+    
+    cs1 = s1.a'*s1.c
+    cs2 = s2.a'*s2.c # should be identical to s1.a'*s2.c
+    csu = s1.a'*u
+    
+    minc = min(cs1, cs2)
+    maxc = max(cs1, cs2)
+    
+    if minc <= csu <= maxc
+        return true
+    else
+        return false
+    end
+end
+
+function inside(q::Quadric, u::AbstractVector)
+    uh = [u; 1]
+    if uh'*q.Q*uh <= 0
+        return false
+    else 
+        return true
+    end
+end
+
+function inside(tq::TruncatedQuadric, u::AbstractVector)
+    return inside(tq.q, u) && inside(tq.p..., u)
 end
 
 function classify(q::Quadric)

@@ -18,7 +18,7 @@ p = Paraboloid(3, [3;3;3], [0;0;1])
 qp = Quadric(p)
 tqp = changerepresentation(qp)
 
-sray = Particle([0;0;0],[1;1;1],10e3)
+sray = Particle([0;0;0],[1;1;1],10e3, 0)
 
 n = 10
 solA = rand(n,n)
@@ -55,14 +55,97 @@ solc = 10
 
     @testset "intersections" begin
         @test all(in_out(sray, qs) .== ((s.a'*s.c - s.a'*sray.r0)/(s.a'*sray.v),0))
-        cray = Particle(c.c, [0;0;1], 10e3)
+        cray = Particle(c.c, [0;0;1], 10e3, 1)
         @test all(in_out(cray, qc) .== (-c.R, c.R))
+        
+        @testset "parallel ray intersection" begin
+            h = 1
+            truncs = [
+                Plane(c.c - c.a*h/2, c.a),
+                Plane(c.c + c.a*h/2, c.a),
+            ]
+            tq = TruncatedQuadric(c, truncs, false)
+            pdir = cross(c.a, rand(3))
+            pdir = pdir/norm(pdir) # direction to move test points (perpendicular to axis)
+            pos0 = c.c + (c.a'*c.c)*c.a/8 # initial position (along the axis, a little away from c)
+            n = 100
+            for k in 1:n
+                p = pos0 + 2*c.R/n*(k - 1)*pdir
+                res = inside(tq, p)
+                if k <= n/2
+                    @test res
+                    
+                else
+                    @test !res
+                end
+            end
+            
+            ppar = Particle(
+                pos0 - c.R*pdir, # displace along plane-parallel directoin
+                pdir,            # fly parallel to planes
+                1,
+                2
+            )
+            pper = Particle(
+                pos0 - c.R*c.a,  # displace along quadric axis
+                c.a,            # fly parallel to quadric axis
+                1,
+                2
+            )
+            tpar = interactiontimes(tq, ppar)
+            tper = interactiontimes(tq, pper)
+            @test (tpar[2] - tpar[1]) == 2*c.R
+            @test (tper[2] - tper[1]) == h
+        end
     end
 
     @testset "normal vectors" begin
         
     end
 
+    @testset "block properties" begin
+        cyls = [
+            Cylinder(1.0, [1;1;1], [0;0;1]),
+            Cylinder(2.0, [1;1;1], [0;0;1]),
+            Cylinder(3.0, [1;1;1], [0;0;1]),
+            Cylinder(4.0, [1;1;1], [0;0;1]),
+            Cylinder(5.0, [1;1;1], [0;0;1])
+        ]
+        n = length(cyls)
+        qs = Vector{Quadric}(undef, n)
+        
+        bigQ = zeros(n*4, n*4)
+        bigV = zeros(n*4, n)
+        bigP = zeros(n*4, 1)
+        v = [1;2;3;0]
+        v = v/norm(v)
+        p = [8;4;32;1]
+
+        for (i,cyl) in enumerate(cyls)
+            qs[i] = Quadric(cyl)
+            bigI = (i - 1)*4 + 1
+            bigQ[bigI:bigI+3, bigI:bigI+3] = qs[i].Q
+            bigV[bigI:bigI+3, i] = v
+            bigP[bigI:bigI+3] = p
+        end
+
+        quadblock = bigV'*bigQ*bigV
+        linblock = 2*bigP'*bigQ*bigV
+        
+        # display(bigQ)
+        
+        # display(eigvals(bigQ))
+        println("Q rank deficiency: ",rank(bigQ) - 5*4)
+        println("Q pinv deficiency: ",rank(pinv(bigQ)) - 5*4)
+        println("V'QV")
+        display(quadblock)
+        display(pinv(quadblock))
+        println("V'QV rank deficiency: ",rank(quadblock) - 5)
+        println("V'QV pinv deficiency: ",rank(pinv(quadblock)) - 5)
+        println("(V'QV)^-1 QV")
+        display(pinv(quadblock)*linblock')
+
+    end
     @testset "quadratic solution" begin
         cyl = Cylinder(1, [1;1;1], [0;0;1])
         qcyl = Quadric(cyl)
@@ -83,9 +166,9 @@ solc = 10
         solb = 2*Q*V
 
         solc = p'*Q*p - 2*cylc
-        (xint1, xint2) = solve_quadratic(solA,solb,solc)
+        # (xint1, xint2) = solve_quadratic(solA,solb,solc)
 
-        println(xint1, xint2)
+        # println(xint1, xint2)
         
         # (x1, x2) = solve_quadratic(solA,solb,solc)
     end
