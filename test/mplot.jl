@@ -21,7 +21,8 @@ function main()
 
     for i = 1:nax
         # scene = LScene(fig[i, 1], show_axis=false)
-        ax = [1; cos((i - 1)/nax*pi/2); sin((i - 1)/nax*pi/2)]
+        # ax = [1; cos((i - 1)/nax*pi/2); sin((i - 1)/nax*pi/2)]
+        ax = [1; 0; sin((i-1)/nax*pi/2)]
         ax = ax/norm(ax)
 
         cy = Cylinder(R, center, ax)
