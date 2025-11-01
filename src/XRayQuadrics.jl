@@ -8,13 +8,14 @@ import JSON, HDF5, CSV, DataFrames
 using Colors
 using GLMakie
 
+include("utils.jl")
 include("quadrics.jl")
 include("optical.jl")
 include("tracing.jl")
 include("plotting.jl")
 include("analysis.jl")
-include("utils.jl")
 
+export r_euler3, r_euler2, r_euler1, r_min_arc
 export Particle, PixelatedAttenuator
 export Quadric, Plane, Cylinder, Cone, Ellipsoid, Paraboloid, Hyperboloid, TruncatedQuadric, normal, changerepresentation
 export in_out, solve_quadratic, batch_photons, batch_photons_through_attenuator

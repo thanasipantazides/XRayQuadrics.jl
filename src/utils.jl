@@ -163,3 +163,26 @@ function randr()::Matrix{<:Real}
 
     return I * cang + (1 - cang) * ax * ax' + cross(ax) * sqrt(1 - cang^2)
 end
+
+function r_euler3(ang::Real)
+    return [cos(ang) -sin(ang) 0;
+        sin(ang) cos(ang) 0;
+        0 0 1]
+end
+function r_euler2(ang::Real)
+    return [cos(ang) 0 sin(ang);
+        -sin(ang) 0 cos(ang);
+        0 1 0]
+end
+function r_euler1(ang::Real)
+    return [1 0 0;
+        0 cos(ang) -sin(ang);
+        0 sin(ang) cos(ang)]
+end
+function r_min_arc(x_A::AbstractVector{<:Real}, x_B::AbstractVector{<:Real})
+    ax = LinearAlgebra.cross(x_A, x_B)
+    ax = ax / norm(ax)
+    cang = x_A' * x_B / norm(x_A) / norm(x_B)
+
+    return I * cang + (1 - cang) * ax * ax' + cross(ax) * sqrt(1 - cang^2)
+end

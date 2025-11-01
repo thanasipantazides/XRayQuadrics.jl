@@ -209,7 +209,7 @@ end
 @doc raw"""
     Quadric(s::Paraboloid)
 
-Construct a `Quadric` from a `Paraboloid` (which has attributes axis = `a` = ``\boldsymbol{a}``; point on axis = `c` = ``\boldsymbol{c}``; and quadratic parameter = `b` = ``b``) using the definitions:
+Construct a `Quadric` from a `Paraboloid` (which has attributes axis = `a` = ``\boldsymbol{a}``; vertex = `c` = ``\boldsymbol{c}``; and quadratic parameter = `b` = ``b``) using the definitions:
 
 ``\boldsymbol{Q}_r = \boldsymbol{a}\boldsymbol{a}^\mathsf{T} - \boldsymbol{1}``
 
@@ -306,7 +306,7 @@ Converts a `Quadric` to a `Plane`, `Cylinder`, `Paraboloid`, or `Hyperboloid` ba
     This function is not fast. Minimize conversion between explicit surface and quadric matrix in heavy-lifting code. 
 """
 function changerepresentation(q::Quadric)
-    ε = 1e-15
+    ε = 1e-13
 
     Qr = q.Q[1:3, 1:3]
     qd = q.Q[1:3, end]
@@ -319,12 +319,12 @@ function changerepresentation(q::Quadric)
         return Plane(c, a)
         
     elseif all(abs.(E) .>= ε)
-        c = (-Qr)\qd                # center of shape
+        c = -pinv(Qr)*qd            # center of shape
         v = eigvecs(Qr)
         a = v[:,end]                # axis is eigenvector for largest eigenvalue
-        
+        # a = sign(qd'*a)*a
         # hyperboloid or cone?
-        if abs(q0 + c'*qd) <= ε
+        if abs(q0 - c'*Qr*c) <= ε
             # a cone
             h = sqrt(tr(Qr + I) - 1)
             Cone(h, c, a)
@@ -336,7 +336,7 @@ function changerepresentation(q::Quadric)
             if γ < 1
                 # ellipsoid
                 e = R
-                d = 1/sqrt(γ + 1)*e
+                d = 1/sqrt(1 - γ)*e
                 return Ellipsoid(d,e,c,a)
             else
                 # a hyperboloid
@@ -350,33 +350,27 @@ function changerepresentation(q::Quadric)
         a = v[:,end]        # axis is eigenvector for largest eigenvalue
 
         if rank(q.Q) == 4
+            # see this math.stackoverflow.com post for ref: https://math.stackexchange.com/questions/4296027/can-the-vertex-of-an-elliptic-paraboloid-be-recovered-from-its-quadric-matrix-fo
+            
             # paraboloid
-            a = sign(qd'*a)*a       # correct for antiparallel axis
+            sense = sign(qd'*a)
+            a = sense*a       # correct for antiparallel axis
             b = sqrt(2*qd'*a)
             
             cb1 = v[:,1]'*qd
             cb2 = v[:,2]'*qd
             cb3 = -(q0 + cb1^2 + cb2^2)/b^2
-
             c = v*[cb1; cb2; cb3]
-
+            # when is c incorrect?? Not always!
+            # println("got a: ", a)
+            # println("got b: ", b)
+            # c = pinv(Qr)*(qd - b^2/2*a)
+            # println("got c: ", c)
             return Paraboloid(b, c, a)
  
         elseif rank(q.Q) == 3
             # cylinder
             c = -pinv(Qr)*qd
-            # try
-            #     # c = (-Qr)\qd
-            # catch SingularException
-            #     (U,S,V) = svd(Qr)
-            #     invS = zeros(length(S))
-            #     [invS[i] = 1/el for (i,el) in enumerate(S) if el != 0]
-            #     c = -V'*(diagm(invS)')*U' * qd
-            #     badI = findfirst(isnan.(c) .| isinf.(c))
-            #     if !isnothing(badI)
-            #         c[badI] = 1.0
-            #     end
-            # end
             
             disc = q0 - c'*Qr*c
             if disc < 0
@@ -385,10 +379,8 @@ function changerepresentation(q::Quadric)
             end
             R = real(sqrt(disc))
             return Cylinder(R, c, a)
- 
         else
             error("unclassified shape")
-
         end
     end
 end
@@ -500,7 +492,7 @@ end
 
 function inside(s1::Plane, s2::Plane, u::AbstractVector)
     # check if the vector lies between two parallel planes
-    if norm(s1.a'*s2.a) != 1
+    if !isapprox(norm(s1.a'*s2.a), 1)
         @warn "planes must be parallel!"
         # return false
     end
@@ -530,6 +522,39 @@ end
 
 function inside(tq::TruncatedQuadric, u::AbstractVector)
     return inside(tq.q, u) && inside(tq.p..., u)
+end
+
+
+function axis_plane_intersection(s::Union{Cylinder, Paraboloid, Hyperboloid, Cone, Ellipsoid}, p::Plane)
+    # project plane points onto axis
+    # ca = s.c + (p.a'*p.c - p.a'*s.c)/(p.a'*s.a)*s.a
+    ca = s.a'*(p.c - s.c)*s.a + s.c
+    return ca
+end
+
+function axis_plane_intersection(q::Quadric, p::Plane)
+    # project plane points onto axis
+    P = eigvecs(q.Q[1:3,1:3])
+    a = P[:,end]
+    ca = a'*(p.c)*a
+    return ca
+end
+
+function axis_plane_intersection(tq::TruncatedQuadric, p::Plane)
+    # project plane points onto axis
+    P = eigvecs(tq.q.Q[1:3,1:3])
+    a = P[:,end]
+    ca = a'*(p.c)*a
+    return ca
+end
+
+function axis_plane_intersection(tq::TruncatedQuadric)
+    # project plane points onto axis
+    P = eigvecs(tq.q.Q[1:3,1:3])
+    a = P[:,end]
+    ca1 = a'*(tq.p[1].c)*a
+    ca2 = a'*(tq.p[2].c)*a
+    return (ca1, ca2)
 end
 
 function classify(q::Quadric)

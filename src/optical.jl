@@ -83,6 +83,7 @@ function interactiontimes(tq::TruncatedQuadric, p::Particle)
     c2time = interactiontimes(tq.p[2], p)
     
     if qdenom == 0
+        @info "parallel to quadric axis"
         # parallel rays to quadric axis; need to check endcaps for solution.
         if inside(tq.q, c1time*p.v + p.r0) || inside(tq.q, c2time*p.v + p.r0)
             timec = sort!([c1time, c2time])
@@ -91,12 +92,13 @@ function interactiontimes(tq::TruncatedQuadric, p::Particle)
             return (0.0,0.0)
         end
     elseif isinf(c1time) || isinf(c2time) && imag(qpnum) == 0 && imag(qnnum) == 0
+        @info "parallel to planes"
         # parallel rays to endcaps; need to check where along quadric it intersects.
         qpnum = real(qpnum)
         qnnum = real(qnnum)
         test_times = sort!([qpnum/qdenom, qnnum/qdenom])
         
-        if inside(tq.p[1], tq.p[2], test_times[1]*p.v + p.r0) && inside(tq.p[1], tq.p[2], test_times[2]*p.v + p.r0)
+        if inside(tq.p[1], tq.p[2], test_times[1]*p.v + p.r0) || inside(tq.p[1], tq.p[2], test_times[2]*p.v + p.r0)
             return (test_times[1], test_times[2])
         else
             return (0.0,0.0)
@@ -104,10 +106,12 @@ function interactiontimes(tq::TruncatedQuadric, p::Particle)
     end
     
     if imag(qpnum) == 0 && imag(qnnum) == 0
+        # @info "oblique"
         qpnum = real(qpnum)
         qnnum = real(qnnum)
         timeq = sort!([qpnum/qdenom, qnnum/qdenom])
         timec = sort!([c1time, c2time])
+        # println(timeq)
         
         if timec[2] < timeq[1] || timeq[2] < timec[1]
             # hits both planes before quadric, or quadric before both planes

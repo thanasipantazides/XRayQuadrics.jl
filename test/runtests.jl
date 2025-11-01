@@ -28,7 +28,7 @@ solc = 10
 @testset "XRayQuadrics.jl" begin
     # Write your tests here.
     # test boolean expressions with @test
-    ε = 1e-15
+    ε = 1e-12 # note: changerepresentation tolerance is 1e-12
     @testset "axis conversion" begin
         @test norm(tqs.a'*s.a) - 1 < ε      # computed axis and original axis are parallel or antiparallel
         @test norm(tqc.a'*c.a) - 1 < ε
@@ -48,11 +48,191 @@ solc = 10
         @test tqh.R - h.R < ε
     end
 
-    @testset "hyperboloid, paraboloid conversion" begin      # computed hyperbolic coeff and original coeff are same
-        @test tqh.b - h.b < ε
-        @test tqp.b - p.b < ε
+    # @testset "hyperboloid conversion" begin      # computed hyperbolic coeff and original coeff are same
+    #     @test tqh.b - h.b < ε
+    # end
+    
+    @testset "cone conversion" begin
+        np = 100
+        inh = zeros(np)
+        outh = zeros(np)
+        ina = zeros(3, np)
+        outa = zeros(3, np)
+        inc = zeros(3, np)
+        outc = zeros(3, np)
+        for k = 1:np
+            ax = rand(3)*2 .- 1
+            ax = ax/norm(ax)
+            cent = rand(3)*4 .- 2
+            cone = Cone(
+                rand()*3 + 0.5, 
+                cent, 
+                ax
+            )
+            qcone = Quadric(cone)
+            recone = changerepresentation(qcone)
+            
+            inh[k] = cone.h
+            outh[k] = recone.h
+            ina[:,k] = cone.a
+            outa[:,k] = recone.a
+            inc[:,k] = cone.c
+            outc[:,k] = recone.c
+        end
+        @testset "h" begin [@test abs(inh[k] - outh[k]) < ε for k in 1:np] end
+        @testset "a" begin [@test abs(ina[:,k]'*outa[:,k] - 1) < ε for k in 1:np] end
+        @testset "|a'*a| = 1" begin [@test abs(ina[:,k]'*outa[:,k]) - 1 < ε for k in 1:np] end
+        @testset "c" begin [@test abs(sum(inc[:,k] .- outc[:,k])) < 3*ε for k in 1:np] end
+    end
+    
+    @testset "cylinder conversion" begin
+        np = 100
+        inr = zeros(np)
+        outr = zeros(np)
+        ina = zeros(3, np)
+        outa = zeros(3, np)
+        inc = zeros(3, np)
+        outc = zeros(3, np)
+        for k = 1:np
+            ax = rand(3)*2 .- 1
+            ax = ax/norm(ax)
+            cent = rand(3)*4 .- 2
+            cyl = Cylinder(
+                rand()*2 + 0.1, 
+                cent, 
+                ax
+            )
+            qcyl = Quadric(cyl)
+            recyl = changerepresentation(qcyl)
+            
+            inr[k] = cyl.R
+            outr[k] = recyl.R
+            ina[:,k] = cyl.a
+            outa[:,k] = recyl.a
+            inc[:,k] = cyl.c
+            outc[:,k] = recyl.c
+        end
+        @testset "R" begin [@test abs(inr[k] - outr[k]) < ε for k in 1:np] end
+        @testset "a" begin [@test abs(ina[:,k]'*outa[:,k] - 1) < ε for k in 1:np] end
+        @testset "|a'*a| = 1" begin [@test abs(ina[:,k]'*outa[:,k]) - 1 < ε for k in 1:np] end
+        @testset "c" begin [@test abs(sum(inc[:,k] .- outc[:,k])) < 3*ε for k in 1:np] end
+    end
+    
+    @testset "paraboloid conversion" begin
+        np = 100
+        inb = zeros(np)
+        outb = zeros(np)
+        ina = zeros(3, np)
+        outa = zeros(3, np)
+        inc = zeros(3, np)
+        outc = zeros(3, np)
+        for k = 1:np
+            ax = rand(3)*2 .- 1
+            ax = ax/norm(ax)
+            cent = rand(3)*4 .- 2
+            par = Paraboloid(
+                rand()*5, 
+                cent, 
+                ax
+            )
+            qpar = Quadric(par)
+            repar = changerepresentation(qpar)
+            
+            inb[k] = par.b
+            outb[k] = repar.b
+            ina[:,k] = par.a
+            outa[:,k] = repar.a
+            inc[:,k] = par.c
+            outc[:,k] = repar.c
+        end
+        @testset "b" begin [@test abs(inb[k] - outb[k]) < ε for k in 1:np] end
+        @testset "a" begin [@test abs(ina[:,k]'*outa[:,k] - 1) < ε for k in 1:np] end
+        @testset "|a'*a| = 1" begin [@test abs(ina[:,k]'*outa[:,k]) - 1 < ε for k in 1:np] end
+        @testset "c" begin [@test abs(sum(inc[:,k] .- outc[:,k])) < 3*ε for k in 1:np] end
+    end
+    
+    @testset "ellipsoid conversion" begin
+        np = 100
+        ine = zeros(np)
+        oute = zeros(np)
+        ind = zeros(np)
+        outd = zeros(np)
+        ina = zeros(3, np)
+        outa = zeros(3, np)
+        inc = zeros(3, np)
+        outc = zeros(3, np)
+        for k = 1:np
+            ax = rand(3)*2 .- 1
+            ax = ax/norm(ax)
+            cent = rand(3)*4 .- 2
+            d = rand()*4 - 1
+            e = d - rand()
+            ell = Ellipsoid(
+                e,
+                d,
+                cent, 
+                ax
+            )
+            qell = Quadric(ell)
+            reell = changerepresentation(qell)
+            
+            ind[k] = ell.d
+            outd[k] = reell.d
+            ine[k] = ell.e
+            oute[k] = reell.e
+            ina[:,k] = ell.a
+            outa[:,k] = reell.a
+            inc[:,k] = ell.c
+            outc[:,k] = reell.c
+        end
+        @testset "d (semimajor)" begin [@test abs(ind[k] - outd[k]) < ε for k in 1:np] end
+        @testset "e (semiminor)" begin [@test abs(ine[k] - oute[k]) < ε for k in 1:np] end
+        @testset "a" begin [@test abs(ina[:,k]'*outa[:,k] - 1) < ε for k in 1:np] end
+        @testset "|a'*a| = 1" begin [@test abs(ina[:,k]'*outa[:,k]) - 1 < ε for k in 1:np] end
+        @testset "c" begin [@test abs(sum(inc[:,k] .- outc[:,k])) < 3*ε for k in 1:np] end
     end
 
+    @testset "hyperboloid conversion" begin
+        np = 100
+        inr = zeros(np)
+        outr = zeros(np)
+        inb = zeros(np)
+        outb = zeros(np)
+        ina = zeros(3, np)
+        outa = zeros(3, np)
+        inc = zeros(3, np)
+        outc = zeros(3, np)
+        for k = 1:np
+            ax = rand(3)*2 .- 1
+            ax = ax/norm(ax)
+            cent = rand(3)*4 .- 2
+            R = rand()*4 - 1
+            b = rand()*3 - 1
+            hyp = Hyperboloid(
+                R,
+                b,
+                cent, 
+                ax
+            )
+            qhyp = Quadric(hyp)
+            rehyp = changerepresentation(qhyp)
+            
+            inr[k] = hyp.R
+            outr[k] = rehyp.R
+            inb[k] = hyp.b
+            outb[k] = rehyp.b
+            ina[:,k] = hyp.a
+            outa[:,k] = rehyp.a
+            inc[:,k] = hyp.c
+            outc[:,k] = rehyp.c
+        end
+        @testset "R" begin [@test abs(inr[k] - outr[k]) < ε for k in 1:np] end
+        @testset "b" begin [@test abs(inb[k] - outb[k]) < ε for k in 1:np] end
+        @testset "a" begin [@test abs(ina[:,k]'*outa[:,k] - 1) < ε for k in 1:np] end
+        @testset "|a'*a| = 1" begin [@test abs(ina[:,k]'*outa[:,k]) - 1 < ε for k in 1:np] end
+        @testset "c" begin [@test abs(sum(inc[:,k] .- outc[:,k])) < 3*ε for k in 1:np] end
+    end
+    
     @testset "intersections" begin
         @test all(in_out(sray, qs) .== ((s.a'*s.c - s.a'*sray.r0)/(s.a'*sray.v),0))
         cray = Particle(c.c, [0;0;1], 10e3, 1)
@@ -94,13 +274,39 @@ solc = 10
             )
             tpar = interactiontimes(tq, ppar)
             tper = interactiontimes(tq, pper)
-            @test (tpar[2] - tpar[1]) == 2*c.R
-            @test (tper[2] - tper[1]) == h
+            @test (tpar[2] - tpar[1]) - 2*c.R < ε
+            @test (tper[2] - tper[1]) - h < ε
+        end
+        @testset "axis-plane" begin
+            h = 1
+            truncs = [
+                Plane(c.c - c.a*h/2, c.a),
+                Plane(c.c + c.a*h/2, c.a),
+                # Plane(c.c - rand(3)*h*4, c.a),
+                # Plane(c.c + rand(3)*h*4, c.a),
+            ]
+            tq = TruncatedQuadric(c, truncs, false)
+            
+            ca1 = axis_plane_intersection(c, truncs[1])
+            ca2 = axis_plane_intersection(c, truncs[2])
+            tqca1 = axis_plane_intersection(c, truncs[1])
+            tqca2 = axis_plane_intersection(c, truncs[2])
+            
+            
+            @test abs(sum(ca1 .- truncs[1].c)) < 3*ε
+            @test abs(sum(ca2 .- truncs[2].c)) < 3*ε
+            
+            @test abs(sum(tqca1 .- truncs[1].c)) < 3*ε
+            @test abs(sum(tqca2 .- truncs[2].c)) < 3*ε
         end
     end
 
     @testset "normal vectors" begin
-        
+        h = 1
+        truncs = [
+            Plane(c.c - c.a*h/2, c.a),
+            Plane(c.c + c.a*h/2, c.a),
+        ]
     end
 
     @testset "block properties" begin
@@ -135,15 +341,15 @@ solc = 10
         # display(bigQ)
         
         # display(eigvals(bigQ))
-        println("Q rank deficiency: ",rank(bigQ) - 5*4)
-        println("Q pinv deficiency: ",rank(pinv(bigQ)) - 5*4)
-        println("V'QV")
-        display(quadblock)
-        display(pinv(quadblock))
-        println("V'QV rank deficiency: ",rank(quadblock) - 5)
-        println("V'QV pinv deficiency: ",rank(pinv(quadblock)) - 5)
-        println("(V'QV)^-1 QV")
-        display(pinv(quadblock)*linblock')
+        # println("Q rank deficiency: ",rank(bigQ) - 5*4)
+        # println("Q pinv deficiency: ",rank(pinv(bigQ)) - 5*4)
+        # println("V'QV")
+        # display(quadblock)
+        # display(pinv(quadblock))
+        # println("V'QV rank deficiency: ",rank(quadblock) - 5)
+        # println("V'QV pinv deficiency: ",rank(pinv(quadblock)) - 5)
+        # println("(V'QV)^-1 QV")
+        # display(pinv(quadblock)*linblock')
 
     end
     @testset "quadratic solution" begin
