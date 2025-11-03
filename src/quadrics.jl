@@ -536,25 +536,35 @@ function axis_plane_intersection(q::Quadric, p::Plane)
     # project plane points onto axis
     P = eigvecs(q.Q[1:3,1:3])
     a = P[:,end]
-    ca = a'*(p.c)*a
+    
+    cest = zeros(3)
+    if rank(q.Q) == 4 && (sum(abs.(eigvals(q.Q[1:3,1:3])) .>= 1e-12) == 2)
+        # a paraboloid---need to handle c carefully.
+        qd = q.Q[1:3,end]
+        sense = sign(qd'*a)
+        a = sense*a       # correct for antiparallel axis
+        b = sqrt(qd'*a)
+        
+        cb1 = P[:,1]'*qd
+        cb2 = P[:,2]'*qd
+        cb3 = -(q.Q[end] + cb1^2 + cb2^2)/b^2
+        cest = P*[cb1; cb2; cb3]
+    else
+        # all other shapes, just find some valid point on the axis. Later we'll move it into the plane.
+        cest = pinv(-q.Q[1:3,1:3])*q.Q[1:3,end]
+    end
+    ca = a'*(p.c - cest)*a + cest
     return ca
 end
 
 function axis_plane_intersection(tq::TruncatedQuadric, p::Plane)
     # project plane points onto axis
-    P = eigvecs(tq.q.Q[1:3,1:3])
-    a = P[:,end]
-    ca = a'*(p.c)*a
+    ca = axis_plane_intersection(tq.q, p)
     return ca
 end
 
 function axis_plane_intersection(tq::TruncatedQuadric)
-    # project plane points onto axis
-    P = eigvecs(tq.q.Q[1:3,1:3])
-    a = P[:,end]
-    ca1 = a'*(tq.p[1].c)*a
-    ca2 = a'*(tq.p[2].c)*a
-    return (ca1, ca2)
+    return (axis_plane_intersection(tq, tq.p[1]), axis_plane_intersection(tq, tq.p[2]))
 end
 
 function classify(q::Quadric)

@@ -4,7 +4,7 @@ using GLMakie
 import CairoMakie
 using Random
 using ProgressMeter
-import Printf
+import Printf, CSV
 
 function make_monolithic()
     top_r = 10.5e-6
@@ -133,6 +133,7 @@ function setup_n_photons(att::PixelatedAttenuator, path::Union{String, Nothing},
     else
         d = get_photon_data(path)
         angles = d["angles"]
+        println("Source photon angles [deg]: ", sum(angles)/length(angles))
     end
     
     # Shuffle the incident photons, so their is no correlation between their spatial arrangement and the original list order.
@@ -148,7 +149,7 @@ function setup_n_photons(att::PixelatedAttenuator, path::Union{String, Nothing},
     photons = Particle[]
     @showprogress desc = "setting up photons...\t" for i in 1:n
         # energy = rand()*28e3 + 1e3 # random energy from 1 keV to 29 keV.
-        energy = rand()*11e3 + 1e3 # random energy from 1 keV to 11 keV.
+        energy = rand()*20e3 + 1e3 # random energy from 1 keV to 11 keV.
         z = [0,0,1]
         anga = rand(angles)*pi/180
         angc = rand()*2*pi
@@ -203,7 +204,7 @@ function plot_attenuator!(ax::GLMakie.LScene, attenuator::PixelatedAttenuator)
     lines!(ax, perm_border, color=:black)
 end
 
-function save_products(path::String, data::Dict{String, Vector})
+function save_products(path::String, data::Dict{String, Vector}; do_gsfc_meas=false)
     CairoMakie.activate!()
     fig = CairoMakie.Figure(size=(600, 600), backgroundcolor=:transparent)
     
@@ -277,7 +278,7 @@ function save_products(path::String, data::Dict{String, Vector})
     end
     
     ax_each = CairoMakie.Axis(fig[1,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\text{Transmission}", title=L"\text{Raw transmission}")
-    ax_compare = CairoMakie.Axis(fig[2,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\frac{T(\theta)}{T(0)} - 1", title=L"\text{Transmission comparison, } n=%$n_str_latex")
+    ax_compare = CairoMakie.Axis(fig[2,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\frac{T_1}{T_2} - 1", title=L"\text{Transmission comparison, } n=%$n_str_latex")
     
     stairs!(ax_each, bins[1:end-1], gsfcmeasbintransmits, linewidth=1, color=:purple, label=L"\text{GSFC measurement}")
     stairs!(ax_each, gsfc_energy, gsfc_mod, linewidth=1, color=:green, label=L"\text{GSFC model}")
@@ -299,6 +300,131 @@ function save_products(path::String, data::Dict{String, Vector})
     save(joinpath(path, "diff_transmit_n" * n_str * ".pdf"), fig)
 end
 
+function save_products(path::String, source_data::String; do_gsfc_meas=false)
+    data = CSV.File(source_data, header=true)
+    binstop = []
+    binstart = []
+    precount = []
+    postcount = []
+    pretransmits = []
+    posttransmits = []
+    for row in data
+        push!(binstop, row[1])
+        push!(binstart, row[2])
+        push!(precount, row[3])
+        push!(postcount, row[4])
+        push!(pretransmits, row[5])
+        push!(posttransmits, row[6])
+    end
+    
+    CairoMakie.activate!()
+    fig = CairoMakie.Figure(size=(600, 600), backgroundcolor=:transparent)
+    
+    gsfc_data = get_empirical_attenuation_data("src/data/20240607_foxsi4_transmission.csv")
+    gsfc_energy = gsfc_data["energies"] .* 1e3
+    gsfc_mod = gsfc_data["modeled_attenuations"]
+    gsfc_meas = gsfc_data["measured_attenuations"]
+    
+    bins = sort!(unique!([binstart; binstop]))
+    bins = convert(Vector{Float64}, bins)
+    
+    gsfcmodbintransmits = zeros(length(bins) - 1)
+    gsfcmeasbintransmits = zeros(length(bins) - 1)
+    gsfcw, gsfcv, gsfcmodI = bin(gsfc_energy, bins)
+    gsfcw, gsfcv, gsfcmeasI = bin(gsfc_energy, bins)
+    for i in eachindex(gsfcmodI)
+        rolling = 0
+        for j in 1:length(gsfcmodI[i])
+            rolling += gsfc_mod[gsfcmodI[i][j]]
+        end
+        gsfcmodbintransmits[i] = rolling / length(gsfcmodI[i])
+    end
+    for i in eachindex(gsfcmeasI)
+        rolling = 0
+        for j in 1:length(gsfcmeasI[i])
+            rolling += gsfc_meas[gsfcmeasI[i][j]]
+        end
+        gsfcmeasbintransmits[i] = rolling / length(gsfcmeasI[i])
+    end
+    
+    # count photons for reference
+    n_str_in= split(source_data, '.')[1]
+    n_str_reg = r"(?<=_n)(.*)"
+    n_str = match(n_str_reg, n_str_in).match
+    mantissa, exponent = split(n_str, 'e')
+    n_str_latex = L"%$mantissa \times 10^{%$exponent}"
+    
+    prew = precount
+    postw = postcount
+    prebintransmits = pretransmits
+    postbintransmits = posttransmits
+    
+    ax_each = CairoMakie.Axis(fig[1,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\text{Transmission}", title=L"\text{Raw transmission}")
+    ax_compare = CairoMakie.Axis(fig[2,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\frac{T_1}{T_2} - 1", title=L"\text{Transmission comparison, } n=%$n_str_latex", yminorticks=IntervalsBetween(5), yminorticksvisible=true)
+    
+    # stairs!(ax_each, bins[1:end-1], gsfcmeasbintransmits, linewidth=1, color=:purple, label=L"\text{GSFC measurement}")
+    stairs!(ax_each, gsfc_energy, gsfc_mod, linewidth=1, color=:green, label=L"\text{GSFC model}")
+    stairs!(ax_each, bins[1:end-1], prebintransmits, linewidth=1, color=:blue, label=L"\text{model: parallel rays}")
+    stairs!(ax_each, bins[1:end-1], postbintransmits, linewidth=1, color=:red, label=L"\text{model: post-optic rays}")
+    
+    
+    stairs!(ax_compare, bins[1:end-1], prebintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. GSFC model}")
+    stairs!(ax_compare, bins[1:end-1], postbintransmits ./ prebintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. post-optic rays}")
+    stairs!(ax_compare, bins[1:end-1], postbintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi post-optic rays vs. GSFC model}")
+    # stairs!(ax_compare, bins[1:end-1], gsfcmeasbintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{GSFC measurement vs. GSFC model}")
+    
+    if do_gsfc_meas
+        bg = parse_mca("src/data/20250515_163020_A1026d2_30kV_132uA_unfilt2.mca")
+        fg = parse_mca("src/data/20250515_160110_A1026d2_30kV_132uA_center.mca")
+        
+        bg_en = bg["fit_const"] .+ bg["fit_slope"].*Vector(1:length(bg["adc"]))        
+        fg_en = fg["fit_const"] .+ fg["fit_slope"].*Vector(1:length(fg["adc"]))
+        bg_en *= 1e3
+        fg_en *= 1e3
+        println("range: ", min(bg_en...), ", ", max(bg_en...))
+        
+        # then bin bg_en, fg_en, then do binwise transmission.
+        gsfcbgw, gsfcbgv, gsfcmeasbgI = bin(bg_en, bins)
+        gsfcfgw, gsfcfgv, gsfcmeasfgI = bin(fg_en, bins)
+        
+        gsfcmeasbinbgtransmits = zeros(length(bins) - 1)
+        gsfcmeasbinfgtransmits = zeros(length(bins) - 1)
+        for i in eachindex(gsfcmeasbgI)
+            rolling = 0
+            for j in 1:length(gsfcmeasbgI[i])
+                rolling += bg["adc"][gsfcmeasbgI[i][j]]
+            end
+            gsfcmeasbinbgtransmits[i] = rolling / length(gsfcmeasbgI[i])
+        end
+        for i in eachindex(gsfcmeasfgI)
+            rolling = 0
+            for j in 1:length(gsfcmeasfgI[i])
+                rolling += fg["adc"][gsfcmeasfgI[i][j]]
+            end
+            gsfcmeasbinfgtransmits[i] = rolling / length(gsfcmeasfgI[i])
+        end
+        
+        gsfclongmeastransmits = (gsfcmeasbinfgtransmits/fg["livetime"]) ./ (gsfcmeasbinbgtransmits/bg["livetime"])
+        
+        stairs!(ax_each, bins[1:end-1], gsfclongmeastransmits, linewidth=1, label=L"\text{GSFC long measurement}", color=:purple)
+        
+        stairs!(ax_compare, bins[1:end-1], gsfclongmeastransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{GSFC long measurement vs. GSFC model}")
+        
+        # stairs!(ax_compare, bins[1:end-1], postbintransmits ./ gsfclongmeastransmits .- 1, linewidth=1, label=L"\text{Thanasi post-optic rays vs. GSFC long measurement}")
+    
+        # gsfcmeastransmits2 = (fg_en/fg["livetime"])./(bg_en/bg["livetime"])
+    end
+    leg_each = CairoMakie.Legend(fig[1,2], ax_each, frame_visible=false, labelsize=10.f0)
+    leg_compare = CairoMakie.Legend(fig[2,2], ax_compare, frame_visible=false, labelsize=10.f0)
+    
+    ylims!(ax_compare, [-0.5, 0.5])
+    xlims!(ax_compare, [1e3, 13e3])
+    xlims!(ax_each, [1e3, 13e3])
+    ylims!(ax_each, [-0.05, 0.4])
+    
+    save(joinpath(path, "diff_transmit_n" * n_str * ".pdf"), fig)
+end
+
 #######################################################################
 ### ----------------- for many, self-generated photons ------------ ###
 #######################################################################
@@ -307,10 +433,11 @@ function main_nphoton()
     
     mon = make_monolithic()
     att = make_attenuator()
-    n = Int(5e6)
+    println("thickness: ", norm(att.toppoint - att.bottompoint))
+    n = Int(1e5)
     angphotons, angenergies, angangles = setup_n_photons(att, "src/data/milo_input.csv", n)
     prephotons, preenergies, preangles = setup_n_photons(att, nothing, n)
-    
+    println("Mean angle [deg]: ", sum(angangles)/length(angangles))
     GLMakie.activate!()
     f = GLMakie.Figure(size=(900, 600))
     layout3d = GLMakie.GridLayout(f[1,1])
@@ -357,5 +484,36 @@ function main_nphoton()
         "postphotons" => angphotons
     )
     
-    save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/oct30", savedata)
+    save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov2", savedata, do_gsfc_meas=false)
+end
+
+function get_previous_photon_data(file::String)
+    data = CSV.file(file, header=true)
+    binstop = []
+    binstart = []
+    precount = []
+    postcount = []
+    pretransmission = []
+    posttransmission = []
+    for row in data
+        push!(binstop, row[1])
+        push!(binstart, row[2])
+        push!(precount, row[3])
+        push!(postcount, row[4])
+        push!(pretransmission, row[5])
+        push!(posttransmission, row[6])
+    end
+    return Dict(
+        "binstop"=>binstop,
+        "binstart"=>binstart,
+        "precount"=>precount,
+        "postcount"=>postcount,
+        "pretransmits"=>pretransmission,
+        "posttransmits"=>posttransmission
+    )
+end
+
+function just_plot()
+   save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov2","/Users/thanasi/Documents/FOXSI/Rays/results/2025/oct30/transmit_data_n1e+07.csv"; do_gsfc_meas=true)
+    
 end

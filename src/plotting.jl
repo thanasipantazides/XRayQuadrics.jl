@@ -117,11 +117,12 @@ function plot!(ax::Makie.LScene, ps::Vector{Particle}; length_scale=1e-6)
     lines!(ax, us, color=:blue, linewidth=0.5)
 end
 
-function plot!(ax::GLMakie.LScene, tq::TruncatedQuadric; caps=true)
+function plot!(ax::GLMakie.LScene, tq::TruncatedQuadric; caps=false)
     (X, Y, Z, T, debug) = cartesian_grid(tq)
 
     colors = Dict(Paraboloid=> :green, Hyperboloid=> :blue, Cylinder=> :red, Cone=> :yellow, Ellipsoid=> :magenta)
 
+    caps = tq.caps
     surface!(
         ax, 
         X[1], Y[1], Z[1],
@@ -131,22 +132,22 @@ function plot!(ax::GLMakie.LScene, tq::TruncatedQuadric; caps=true)
     )
     
     if caps
-        lines!(ax, debug["origin"], linewidth=5, color=:black)
-        wireframe!(
+        # lines!(ax, debug["origin"], linewidth=5, color=:black)
+        surface!(
             ax, 
             X[2], Y[2], Z[2],
-            color=:red
-            # colorrange=(-30, -20),
-            # highclip=(colors[T], 0.3),
-            # transparency=true
+            # color=colors[T]
+            colorrange=(-30, -20),
+            highclip=(colors[T], 0.3),
+            transparency=true
         )
-        wireframe!(
+        surface!(
             ax, 
             X[3], Y[3], Z[3],
-            color=:blue
-            # colorrange=(-30, -20),
-            # highclip=(colors[T], 0.3),
-            # transparency=true
+            # color=colors[T]
+            colorrange=(-30, -20),
+            highclip=(colors[T], 0.3),
+            transparency=true
         )
     end
 end
@@ -174,19 +175,15 @@ function interactionsites(tq::TruncatedQuadric, p::Particle)
 end
 
 function get_mesh(tq::TruncatedQuadric, nθ::Int64, nζ::Int64)
-    # ca1, ca2 = axis_plane_intersection(tq)
-    ca1 = tq.p[1].c
-    ca2 = tq.p[2].c
+    ca1, ca2 = axis_plane_intersection(tq)
     ax = ca2 - ca1
     ax = ax/norm(ax)
-    # ca1 = ax'*ca1*ax
-    # ca2 = ax'*ca2*ax
     mid = 0.5*(ca1 + ca2)
     dist = norm(ca2 - ca1)
     ca1proj = ax'*ca1
     ca2proj = ax'*ca2
     
-    xordinate = rand(3) # a reference direction normal to the axis
+    xordinate = ax - rand(3) # a reference direction normal to the axis
     xordinate = cross(ax, xordinate)
     xordinate = xordinate/norm(xordinate)
     yordinate = cross(ax, xordinate)
@@ -196,7 +193,7 @@ function get_mesh(tq::TruncatedQuadric, nθ::Int64, nζ::Int64)
     
     θ = range(0, stop=2*π, length=nθ) # each ray should hit surface twice, so just go up to π
     # ζ = range(ca1proj, stop=ca2proj, length=nζ)
-    ζ = range(0, stop=1, length=nζ)
+    ζ = range(0.01, stop=0.99, length=nζ)
     
     X = zeros(nθ, nζ)
     Y = zeros(nθ, nζ)
@@ -225,12 +222,6 @@ function get_mesh(tq::TruncatedQuadric, nθ::Int64, nζ::Int64)
     Yc2 = [ca2[2]*ones(nθ, 1) Y[:,end]]
     Zc1 = [ca1[3]*ones(nθ, 1) Z[:,1]]
     Zc2 = [ca2[3]*ones(nθ, 1) Z[:,end]]
-    # Xc1 = [zeros(nθ, 1) X[:,1]]
-    # Xc2 = [zeros(nθ, 1) X[:,end]]
-    # Yc1 = [zeros(nθ, 1) Y[:,1]]
-    # Yc2 = [zeros(nθ, 1) Y[:,end]]
-    # Zc1 = [Z[:,1] Z[:,1]]
-    # Zc2 = [Z[:,1] Z[:,1]]
     
     return ((X,Xc1,Xc2), (Y,Yc1,Yc2), (Z,Zc1,Zc2), debug)
 end

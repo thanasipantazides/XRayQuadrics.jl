@@ -13,7 +13,7 @@ function get_intersections(shape::Union{Cylinder, Cone, Paraboloid, Ellipsoid, H
     R = 10
     p = Particle[]
     ipos = Point3f[]
-    tq = TruncatedQuadric(shape, planes, true)
+    tq = TruncatedQuadric(shape, planes, false)
     for k = 1:n
         pos = randr()*[0;0;1]*R*3
         vel = mid - pos
@@ -70,7 +70,7 @@ function main()
         hy = Hyperboloid(R, b, center, ax)
         el = Ellipsoid(d, e, center, ax)
 
-        p1 = Plane(cy.c - cy.a*0.5, ax)
+        p1 = Plane(cy.c + cy.a*0.5, ax)
         p2 = Plane(cy.c + cy.a*1.5, ax)
 
         surfs = [cy, co, pa, hy, el]
@@ -82,7 +82,8 @@ function main()
             tq = TruncatedQuadric(q, [p1, p2], true)
             ax = LScene(fig[i, j], show_axis=false)
             
-            scatter!(ax, ipos, color=:blue, markersize=2)
+            # scatter!(ax, ipos, color=:blue, markersize=2)
+            
             XRayQuadrics.plot!(ax, tq)
             
             cam3d!(

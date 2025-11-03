@@ -1,5 +1,8 @@
 # XRayQuadrics
-Physical simulation of x-rays interacting with 
+Physical simulation of x-rays interacting with quadric surfaces.
+
+Quadric surfaces look like this:
+![Image of five quadric surfaces, cylinder, cone, paraboloid, hyperboloid, ellipsoid.](docs/src/assets/figures/shapes.png)
 
 ## Development
 ### Install Julia
@@ -8,7 +11,7 @@ Physical simulation of x-rays interacting with
 
 ### Add packages
 ```bash
-% julia
+% julia --project=.
 julia> ]
 pkg> activate .
 ```
@@ -17,11 +20,9 @@ pkg> activate .
 pkg> test
 ```
 
-
 ### Make sample plot
 ```bash
 ... hit backspace to get out of Pkg ...
 julia> using Revise
-julia> include("test/mplot.jl")
+julia> include("examples/plotshapes.jl")
 ```
-because I have written the plotting functionality at the file-level, not wrapped it in a module.
