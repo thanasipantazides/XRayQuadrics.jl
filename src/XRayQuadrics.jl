@@ -16,7 +16,7 @@ include("plotting.jl")
 include("analysis.jl")
 
 export r_euler3, r_euler2, r_euler1, r_min_arc
-export Particle, PixelatedAttenuator
+export Particle, PixelatedAttenuator, mean_thickness
 export Quadric, Plane, Cylinder, Cone, Ellipsoid, Paraboloid, Hyperboloid, TruncatedQuadric, normal, changerepresentation
 export in_out, solve_quadratic, batch_photons, batch_photons_through_attenuator
 export convert_arguments, cartesian_grid, get_mesh, plot, plot!, axis_plane_intersection, interactionlength, interactiontimes, inside

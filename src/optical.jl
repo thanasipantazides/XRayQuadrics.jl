@@ -58,6 +58,22 @@ end
 #     return Particle(r0, v/norm(v), E)
 # end
 
+function mean_thickness(att::PixelatedAttenuator)
+    sq_w = att.pitch^2
+    r_w, h_w = begin
+        n = 1
+        r = 0
+        h = 0
+        for h in att.holes
+            cyl = changerepresentation(h.q)
+            r += cyl.R
+            h += abs(cyl.a'*(h.p[1].c - h.p[2].c))
+        end
+        return (r/n, h/n)
+    end
+    
+end
+
 function interactiontimes(s::Plane, p::Particle)
     snum = -s.a'*(p.r0 - s.c)
     sdenom = s.a'*p.v

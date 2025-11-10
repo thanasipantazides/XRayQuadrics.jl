@@ -57,6 +57,51 @@ function get_empirical_attenuation_data(file::String)
     return Dict("energies" => energies, "measured_attenuations" => measured_attenuations, "modeled_attenuations" => modeled_attenuations)
 end
 
+function parse_mca(file::String)
+    
+    content = read(file, String)
+    
+    reg_cal = r"<<CALIBRATION>>(?s)(.*)<<ROI>>"
+    reg_data = r"<<DATA>>(?s)(.*)<<END>>"
+    reg_time = r"(?<=REAL_TIME - )(.*)"
+    
+    match_cal = match(reg_cal, content)
+    match_data = match(reg_data, content)
+    match_time = match(reg_time, content)
+    
+    livetime = parse(Float64, match_time.match)
+    
+    cal = split(match_cal.match, '\n')
+    data = split(match_data.match, '\n')
+    caladc = Float64[]
+    calenergy = Float64[]
+    for line in cal
+        if occursin("<<", line) || '-' in line
+            continue
+        end
+        val = split(line, ' ')
+        push!(caladc, parse(Float64, val[1]))
+        push!(calenergy, parse(Float64, val[2]))
+    end
+    
+    adc = Float64[]
+    for line in data
+        if occursin("<<", line)
+            continue
+        end
+        push!(adc, parse(Float64, line))
+    end
+    
+    n = length(caladc)
+    A = [ones(n) caladc]
+    b = calenergy
+    reg = inv(A'*A)*A'*b
+    println(reg)
+    
+    ret = Dict("fit_const"=>reg[1], "fit_slope"=>reg[2], "adc"=>adc, "livetime"=>livetime)
+    return ret
+end
+
 function interpolateattenuation(E::T, table::Dict{String, Vector{Any}}; level=0) where T<:Real
     if level == 0 && (E >= table["energies"][end] || E < table["energies"][1])
         @error "looking up energy outside bounds!"
@@ -69,8 +114,6 @@ function interpolateattenuation(E::T, table::Dict{String, Vector{Any}}; level=0)
     
     cE = table["attenuations"][lower_k] + (table["attenuations"][upper_k] - table["attenuations"][lower_k])*(E - table["energies"][lower_k]) / (table["energies"][upper_k] - table["energies"][lower_k])
     
-    # cE = table[lower_k,2] + (table[upper_k,2] - table[lower_k,2])*(E - table[lower_k, 1]) / (table[upper_k, 1] - table[lower_k, 1])
-
     return cE
 end
 

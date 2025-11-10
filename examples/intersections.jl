@@ -35,8 +35,13 @@ function intersections()
         a
     )
     
-    plane1 = Plane(c - 0.5*a, a)
-    plane2 = Plane(c + 0.5*a, a)
+    cyl = Paraboloid(
+        R, c, a
+    )
+    println("center: ", c)
+    println("axis: ", a)
+    plane1 = Plane(c + 0.25*a, a)
+    plane2 = Plane(c + 3*a, a)
     
     ccap1 = Point3f(cyl.c + cyl.a'*(plane1.c - cyl.c)*cyl.a)
     ccap2 = Point3f(cyl.c + cyl.a'*(plane2.c - cyl.c)*cyl.a)
@@ -89,13 +94,13 @@ function intersections()
         show_axis=true,
     )
     # plot the surface:
-    XRayQuadrics.plot!(scene, tq, caps=false)
+    XRayQuadrics.plot!(scene, tq, caps=true)
     # plot photons:
     # XRayQuadrics.plot!(scene, p, length_scale=0.1)
     # plot some cap and body midpoints
     scatter!(scene, [Point3f(0.0), ccap1, midcyl, ccap2], color=:black, markersize=10)
     # plot the intersection points:
-    # scatter!(scene, ipos, color=:blue, markersize=2)
+    scatter!(scene, ipos, color=:blue, markersize=2)
     
     points = oblique_points(tq)
     color = RGBAf[]
@@ -106,12 +111,12 @@ function intersections()
             push!(color, RGBAf(0.0,0.0,0.0,1.0))
         end
     end
-    scatter!(scene, points, color=color, markersize=4)
+    # scatter!(scene, points, color=color, markersize=4)
     
     
     
     display(fig)
-    
+    return cyl
     # println(cyl.c)
     # println(cyl.a)
     # println(plane1.c)

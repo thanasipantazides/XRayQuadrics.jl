@@ -6,10 +6,59 @@ using Random
 using ProgressMeter
 import Printf, CSV
 
+function compare_matten(savepath::String)
+    matten_nist_f = "src/data/ehsteve_matten.csv"
+    matten_lbnl_f = "src/data/LBNL_attenlength_Si.csv"
+    matten_nist_phot_f = "src/data/NIST_XCOM_attenlength.csv"
+    matten_nist_scat_f = "src/data/NIST_XCOM_attenlength_scatter.csv"
+    matten_nist_t = get_mass_attenuation_data(matten_nist_f)
+    matten_lbnl_t = get_mass_attenuation_data(matten_lbnl_f)
+    matten_nist_phot_t = get_mass_attenuation_data(matten_nist_phot_f)
+    matten_nist_scat_t = get_mass_attenuation_data(matten_nist_scat_f)
+    
+    energy = (1:0.1:28) .* 1e3
+    energy_range = min(energy...)..max(energy...)
+    matten_nist = [interpolateattenuation(E, matten_nist_t) for E in energy]
+    matten_lbnl = [interpolateattenuation(E, matten_lbnl_t) for E in energy]
+    matten_nist_phot = [interpolateattenuation(E, matten_nist_phot_t) for E in energy]
+    matten_nist_scat = [interpolateattenuation(E, matten_nist_scat_t) for E in energy]
+    
+    CairoMakie.activate!()
+    fig = CairoMakie.Figure(size=(600,400))
+    # ax_raw = Axis(fig[1,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\text{Attenuation length [m}^-1]")
+    ax_compare = Axis(fig[2:3,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\frac{\mu_1(E)}{\mu_2(E)} - 1", yminorticks=IntervalsBetween(5), yminorticksvisible=true)
+    
+    raw_nist_overlap_range = findall(in(energy_range),matten_nist_t["energies"])
+    raw_lbnl_overlap_range = findall(in(energy_range),matten_lbnl_t["energies"])
+    raw_nist_phot_overlap_range = findall(in(energy_range),matten_nist_phot_t["energies"])
+    raw_nist_scat_overlap_range = findall(in(energy_range),matten_nist_scat_t["energies"])
+    
+    # scatter!(ax_raw, matten_nist_t["energies"][raw_nist_overlap_range], matten_nist_t["attenuations"][raw_nist_overlap_range], marker='o', markersize=10, color=:black)
+    # scatter!(ax_raw, matten_lbnl_t["energies"][raw_lbnl_overlap_range], matten_lbnl_t["attenuations"][raw_lbnl_overlap_range], marker='+', markersize=10, color=:red)
+    
+    # lines!(ax_raw, energy, matten_nist, color=:black, linewidth=1)
+    # lines!(ax_raw, energy, matten_lbnl, color=:red, linewidth=1)
+    # lines!(ax_raw, energy, matten_nist_phot, color=:blue, linewidth=1)
+    # lines!(ax_raw, energy, matten_nist_scat, color=:green, linewidth=1)
+    
+    # lines!(ax_compare, energy, matten_nist ./ matten_lbnl .- 1, linewidth=1, color=:black, label="roentgen vs. LBNL")
+    
+    lines!(ax_compare, energy, matten_nist ./ matten_nist_scat .- 1, linewidth=1, label="Roentgen vs. NIST total")
+    lines!(ax_compare, energy, matten_nist ./ matten_lbnl .- 1, linewidth=1, label="Roentgen vs. LBNL")
+    lines!(ax_compare, energy, matten_nist_scat ./ matten_lbnl .- 1, linewidth=1, label="NIST total vs. LBNL")
+    leg = Legend(fig[4,1], ax_compare)
+    ylims!(ax_compare, [-0.25,0.25])
+    
+    # scatter!(ax_raw, matten_lbnl_t["energies"][raw_lbnl_overlap_range], matten_nist2_t["attenuations"][raw_lbnl_overlap_range], marker='+', markersize=5, color=:red)
+    
+    save(savepath, fig)
+end
+
 function make_monolithic()
     top_r = 10.5e-6
     bottom_r = 5e-6
-    top_h = 120e-6
+    # top_h = 120e-6
+    top_h = 104.63673925931994e-6
     bottom_h = 175e-6
     gap = 105e-6
     pitch = 60e-6
@@ -52,7 +101,8 @@ function make_monolithic()
         z*(bottom_h + gap + top_h),   # top point
         [0.0,0.0,0.0],                      # bottom point
         z,                      # normal
-        get_mass_attenuation_data("src/data/LBNL_attenlength_Si.csv"),
+        # get_mass_attenuation_data("src/data/LBNL_attenlength_Si.csv"),
+        get_mass_attenuation_data("src/data/NIST_XCOM_attenlength_scatter.csv"),
         bbox,
         pitch
     ) 
@@ -116,7 +166,8 @@ function make_attenuator()
         z*(bottom_h + gap + top_h),   # top point
         [0.0,0.0,0.0],                      # bottom point
         z,                      # normal
-        get_mass_attenuation_data("src/data/LBNL_attenlength_Si.csv"),
+        # get_mass_attenuation_data("src/data/LBNL_attenlength_Si.csv"),
+        get_mass_attenuation_data("src/data/NIST_XCOM_attenlength_scatter.csv"),
         bbox,
         pitch
     ) 
@@ -149,7 +200,7 @@ function setup_n_photons(att::PixelatedAttenuator, path::Union{String, Nothing},
     photons = Particle[]
     @showprogress desc = "setting up photons...\t" for i in 1:n
         # energy = rand()*28e3 + 1e3 # random energy from 1 keV to 29 keV.
-        energy = rand()*20e3 + 1e3 # random energy from 1 keV to 11 keV.
+        energy = rand()*28e3 + 1e3 # random energy from 1 keV to 11 keV.
         z = [0,0,1]
         anga = rand(angles)*pi/180
         angc = rand()*2*pi
@@ -292,9 +343,9 @@ function save_products(path::String, data::Dict{String, Vector}; do_gsfc_meas=fa
     leg_compare = CairoMakie.Legend(fig[2,2], ax_compare, frame_visible=false, labelsize=10.f0)
     
     ylims!(ax_compare, [-1, 1])
-    xlims!(ax_compare, [1e3, 13e3])
-    xlims!(ax_each, [1e3, 13e3])
-    ylims!(ax_each, [-0.05, 0.4])
+    xlims!(ax_compare, [1e3, 29e3])
+    xlims!(ax_each, [1e3, 29e3])
+    ylims!(ax_each, [-0.05, 1.1])
     
     write(joinpath(path, "transmit_data_n" * n_str * ".csv"), csvdata)
     save(joinpath(path, "diff_transmit_n" * n_str * ".pdf"), fig)
@@ -418,9 +469,9 @@ function save_products(path::String, source_data::String; do_gsfc_meas=false)
     leg_compare = CairoMakie.Legend(fig[2,2], ax_compare, frame_visible=false, labelsize=10.f0)
     
     ylims!(ax_compare, [-0.5, 0.5])
-    xlims!(ax_compare, [1e3, 13e3])
-    xlims!(ax_each, [1e3, 13e3])
-    ylims!(ax_each, [-0.05, 0.4])
+    xlims!(ax_compare, [1e3, 29e3])
+    xlims!(ax_each, [1e3, 29e3])
+    ylims!(ax_each, [-0.05, 1.1])
     
     save(joinpath(path, "diff_transmit_n" * n_str * ".pdf"), fig)
 end
@@ -434,7 +485,7 @@ function main_nphoton()
     mon = make_monolithic()
     att = make_attenuator()
     println("thickness: ", norm(att.toppoint - att.bottompoint))
-    n = Int(1e5)
+    n = Int(2e7)
     angphotons, angenergies, angangles = setup_n_photons(att, "src/data/milo_input.csv", n)
     prephotons, preenergies, preangles = setup_n_photons(att, nothing, n)
     println("Mean angle [deg]: ", sum(angangles)/length(angangles))
@@ -477,14 +528,14 @@ function main_nphoton()
     scatter!(ax_transmit, angenergies, angtransmits, markersize=1, color=:black, label="post-optic\ntransmission")
     
     savedata = Dict(
-        "bins" => Vector(1:0.25:13).*1e3,
+        "bins" => Vector(1:0.25:28).*1e3,
         "pretransmits" => pretransmits,
         "posttransmits" => angtransmits,
         "prephotons" => prephotons,
         "postphotons" => angphotons
     )
     
-    save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov2", savedata, do_gsfc_meas=false)
+    save_products("~/Documents/FOXSI/Rays/results/2025/nov10/compare", savedata, do_gsfc_meas=true)
 end
 
 function get_previous_photon_data(file::String)
@@ -514,6 +565,6 @@ function get_previous_photon_data(file::String)
 end
 
 function just_plot()
-   save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov2","/Users/thanasi/Documents/FOXSI/Rays/results/2025/oct30/transmit_data_n1e+07.csv"; do_gsfc_meas=true)
+   save_products("~/Documents/FOXSI/Rays/results/2025/nov10/compare","~/Documents/FOXSI/Rays/results/2025/nov10/transmit_data_n1e+07.csv"; do_gsfc_meas=true)
     
 end
