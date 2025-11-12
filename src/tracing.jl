@@ -422,8 +422,13 @@ function batch_photons_through_attenuator(photons::Vector{Particle}, attenuator:
     #     transmission_probability(photons[k], attenuator)
     #     # pmap(k -> transmit[k] = transmission_probability(photons[k], attenuator), eachindex(photons))
     # end
-    @showprogress desc = "tracing photons...\t" for (k,p) in enumerate(photons)
+    updatevery = Int(round(length(photons)/100))
+    progress = Progress(length(photons); desc = "tracing photons...\t")
+    for (k,p) in enumerate(photons)
         transmit[k] = transmission_probability(p, attenuator)
+        if k % updatevery == 0
+            ProgressMeter.update!(progress, k)
+        end
     end
     return transmit
 end
