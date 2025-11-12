@@ -6,12 +6,20 @@ Quadric surfaces look like this:
 
 ## Development
 ### Install Julia
+Install the Julia language via `juliaup` (the installer), available [here](https://julialang.org/install/).
 
 ### Clone this repository
+```bash
+    git clone https://github.com/thanasipantazides/XRayQuadrics.jl.git
+```
 
-### Add packages
+### Add required packages
+Run
 ```bash
 % julia --project=.
+```
+which launches the Julia REPL. From here, activate the project environment:
+```bash
 julia> ]
 pkg> activate .
 ```
@@ -20,9 +28,10 @@ pkg> activate .
 pkg> test
 ```
 
-### Make sample plot
+### Make a sample plot
 ```bash
-... hit backspace to get out of Pkg ...
+... hit backspace to get out of the Pkg prompt...
 julia> using Revise
 julia> include("examples/plotshapes.jl")
+julia> main()
 ```
