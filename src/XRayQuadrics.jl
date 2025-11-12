@@ -4,7 +4,7 @@ module XRayQuadrics
 using Distributed, DistributedArrays
 using LinearAlgebra, SparseArrays
 using Random
-import JSON, HDF5, CSV, DataFrames
+import HDF5, CSV, DataFrames
 using Colors
 using GLMakie
 
