@@ -328,23 +328,40 @@ function save_products(path::String, data::Dict{String, Vector}; do_gsfc_meas=fa
             string(postbintransmits[k])
     end
     
-    ax_each = CairoMakie.Axis(fig[1,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\text{Transmission}", title=L"\text{Raw transmission}")
-    ax_compare = CairoMakie.Axis(fig[2,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\frac{T_1}{T_2} - 1", title=L"\text{Transmission comparison, } n=%$n_str_latex")
+    ax_each = CairoMakie.Axis(
+        fig[1,1], 
+        xlabel=L"\text{Energy [keV]}", 
+        ylabel=L"\text{Transmission}", 
+        title=L"\text{Raw transmission}",
+        # xtickformat = values -> [L"%$(value)" for value in values],
+        xticklabelsize = 12.f0,
+        yticklabelsize = 12.f0
+    )
+    ax_compare = CairoMakie.Axis(
+        fig[2,1], 
+        xlabel=L"\text{Energy [keV]}", 
+        ylabel=L"\frac{T_1}{T_2} - 1", 
+        title=L"\text{Transmission comparison, } n=%$n_str_latex",
+        xticklabelsize = 12.f0,
+        yticklabelsize = 12.f0
+    )
     
-    stairs!(ax_each, bins[1:end-1], gsfcmeasbintransmits, linewidth=1, color=:purple, label=L"\text{GSFC measurement}")
-    stairs!(ax_each, gsfc_energy, gsfc_mod, linewidth=1, color=:green, label=L"\text{GSFC model}")
-    stairs!(ax_each, bins[1:end-1], prebintransmits, linewidth=1, color=:blue, label=L"\text{model: parallel rays}")
-    stairs!(ax_each, bins[1:end-1], postbintransmits, linewidth=1, color=:red, label=L"\text{model: post-optic rays}")
+    stairs!(ax_each, bins[1:end-1] ./ 1e3, gsfcmeasbintransmits, linewidth=1, color=:purple, label=L"\text{GSFC measurement}")
+    stairs!(ax_each, gsfc_energy ./ 1e3, gsfc_mod, linewidth=1, color=:green, label=L"\text{GSFC model}")
+    stairs!(ax_each, bins[1:end-1] ./ 1e3, prebintransmits, linewidth=1, color=:blue, label=L"\text{model: parallel rays}")
+    stairs!(ax_each, bins[1:end-1] ./ 1e3, postbintransmits, linewidth=1, color=:red, label=L"\text{model: post-optic rays}")
     leg_each = CairoMakie.Legend(fig[1,2], ax_each, frame_visible=false, labelsize=10.f0)
     
-    stairs!(ax_compare, bins[1:end-1], prebintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. GSFC model}")
-    stairs!(ax_compare, bins[1:end-1], postbintransmits ./ prebintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. post-optic rays}")
-    stairs!(ax_compare, bins[1:end-1], postbintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi post-optic rays vs. GSFC model}")
+    stairs!(ax_compare, bins[1:end-1] ./ 1e3, prebintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. GSFC model}")
+    stairs!(ax_compare, bins[1:end-1] ./ 1e3, postbintransmits ./ prebintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. post-optic rays}")
+    stairs!(ax_compare, bins[1:end-1] ./ 1e3, postbintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi post-optic rays vs. GSFC model}")
     leg_compare = CairoMakie.Legend(fig[2,2], ax_compare, frame_visible=false, labelsize=10.f0)
     
+    
+    
     ylims!(ax_compare, [-1, 1])
-    xlims!(ax_compare, [1e3, 29e3])
-    xlims!(ax_each, [1e3, 29e3])
+    xlims!(ax_compare, [1, 29] .* 1e0)
+    xlims!(ax_each, [1, 29] .* 1e0)
     ylims!(ax_each, [-0.05, 1.1])
     
     write(joinpath(path, "transmit_data_n" * n_str * ".csv"), csvdata)
@@ -410,18 +427,34 @@ function save_products(path::String, source_data::String; do_gsfc_meas=false)
     prebintransmits = pretransmits
     postbintransmits = posttransmits
     
-    ax_each = CairoMakie.Axis(fig[1,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\text{Transmission}", title=L"\text{Raw transmission}")
-    ax_compare = CairoMakie.Axis(fig[2,1], xlabel=L"\text{Energy [eV]}", ylabel=L"\frac{T_1}{T_2} - 1", title=L"\text{Transmission comparison, } n=%$n_str_latex", yminorticks=IntervalsBetween(5), yminorticksvisible=true)
+    ax_each = CairoMakie.Axis(
+        fig[1,1], 
+        xlabel=L"\text{Energy [keV]}", 
+        ylabel=L"\text{Transmission}", 
+        title=L"\text{Raw transmission}",
+        xticklabelsize = 12.f0,
+        yticklabelsize = 12.f0
+    )
+    ax_compare = CairoMakie.Axis(
+        fig[2,1], 
+        xlabel=L"\text{Energy [keV]}", 
+        ylabel=L"\frac{T_1}{T_2} - 1", 
+        title=L"\text{Transmission comparison, } n=%$n_str_latex", 
+        yminorticks=IntervalsBetween(5), 
+        yminorticksvisible=true,
+        xticklabelsize = 12.f0,
+        yticklabelsize = 12.f0
+    )
     
     # stairs!(ax_each, bins[1:end-1], gsfcmeasbintransmits, linewidth=1, color=:purple, label=L"\text{GSFC measurement}")
-    stairs!(ax_each, gsfc_energy, gsfc_mod, linewidth=1, color=:green, label=L"\text{GSFC model}")
-    stairs!(ax_each, bins[1:end-1], prebintransmits, linewidth=1, color=:blue, label=L"\text{model: parallel rays}")
-    stairs!(ax_each, bins[1:end-1], postbintransmits, linewidth=1, color=:red, label=L"\text{model: post-optic rays}")
+    stairs!(ax_each, gsfc_energy ./ 1e3, gsfc_mod, linewidth=1, color=:green, label=L"\text{GSFC model}")
+    stairs!(ax_each, bins[1:end-1] ./ 1e3, prebintransmits, linewidth=1, color=:blue, label=L"\text{model: parallel rays}")
+    stairs!(ax_each, bins[1:end-1] ./ 1e3, postbintransmits, linewidth=1, color=:red, label=L"\text{model: post-optic rays}")
     
     
-    stairs!(ax_compare, bins[1:end-1], prebintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. GSFC model}")
-    stairs!(ax_compare, bins[1:end-1], postbintransmits ./ prebintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. post-optic rays}")
-    stairs!(ax_compare, bins[1:end-1], postbintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi post-optic rays vs. GSFC model}")
+    stairs!(ax_compare, bins[1:end-1] ./ 1e3, prebintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. GSFC model}")
+    stairs!(ax_compare, bins[1:end-1] ./ 1e3, postbintransmits ./ prebintransmits .- 1, linewidth=1, label=L"\text{Thanasi parallel rays vs. post-optic rays}")
+    stairs!(ax_compare, bins[1:end-1] ./ 1e3, postbintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{Thanasi post-optic rays vs. GSFC model}")
     # stairs!(ax_compare, bins[1:end-1], gsfcmeasbintransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{GSFC measurement vs. GSFC model}")
     
     if do_gsfc_meas
@@ -457,9 +490,9 @@ function save_products(path::String, source_data::String; do_gsfc_meas=false)
         
         gsfclongmeastransmits = (gsfcmeasbinfgtransmits/fg["livetime"]) ./ (gsfcmeasbinbgtransmits/bg["livetime"])
         
-        stairs!(ax_each, bins[1:end-1], gsfclongmeastransmits, linewidth=1, label=L"\text{GSFC long measurement}", color=:purple)
+        stairs!(ax_each, bins[1:end-1] ./ 1e3, gsfclongmeastransmits, linewidth=1, label=L"\text{GSFC long measurement}", color=:purple)
         
-        stairs!(ax_compare, bins[1:end-1], gsfclongmeastransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{GSFC long measurement vs. GSFC model}")
+        stairs!(ax_compare, bins[1:end-1] ./ 1e3, gsfclongmeastransmits ./ gsfcmodbintransmits .- 1, linewidth=1, label=L"\text{GSFC long measurement vs. GSFC model}")
         
         # stairs!(ax_compare, bins[1:end-1], postbintransmits ./ gsfclongmeastransmits .- 1, linewidth=1, label=L"\text{Thanasi post-optic rays vs. GSFC long measurement}")
     
@@ -469,8 +502,8 @@ function save_products(path::String, source_data::String; do_gsfc_meas=false)
     leg_compare = CairoMakie.Legend(fig[2,2], ax_compare, frame_visible=false, labelsize=10.f0)
     
     ylims!(ax_compare, [-0.5, 0.5])
-    xlims!(ax_compare, [1e3, 29e3])
-    xlims!(ax_each, [1e3, 29e3])
+    xlims!(ax_compare, [1, 29] .* 1e0)
+    xlims!(ax_each, [1, 29] .* 1e0)
     ylims!(ax_each, [-0.05, 1.1])
     
     save(joinpath(path, "diff_transmit_n" * n_str * ".pdf"), fig)
@@ -485,37 +518,38 @@ function main_nphoton()
     mon = make_monolithic()
     att = make_attenuator()
     println("thickness: ", norm(att.toppoint - att.bottompoint))
-    n = Int(2e7)
+    n = Int(1e5)
     angphotons, angenergies, angangles = setup_n_photons(att, "src/data/milo_input.csv", n)
     prephotons, preenergies, preangles = setup_n_photons(att, nothing, n)
     println("Mean angle [deg]: ", sum(angangles)/length(angangles))
-    GLMakie.activate!()
-    f = GLMakie.Figure(size=(900, 600))
-    layout3d = GLMakie.GridLayout(f[1,1])
-    layout2d = GLMakie.GridLayout(f[1,2])
-    scene = GLMakie.LScene(
-        layout3d[1,1],
-        show_axis=false
-    )
     
-    plot_attenuator!(scene, att)
-    XRayQuadrics.plot!(scene, angphotons, length_scale=1200e-6)
+    # GLMakie.activate!()
+    # f = GLMakie.Figure(size=(900, 600))
+    # layout3d = GLMakie.GridLayout(f[1,1])
+    # layout2d = GLMakie.GridLayout(f[1,2])
+    # scene = GLMakie.LScene(
+    #     layout3d[1,1],
+    #     show_axis=false
+    # )
+    
+    # plot_attenuator!(scene, att)
+    # XRayQuadrics.plot!(scene, angphotons, length_scale=1200e-6)
     # XRayQuadrics.plot!(scene, badphotons, length_scale=1200e-6)
     # XRayQuadrics.plot!(scene, parphotons, length_scale=1200e-6)
     
-    display(f)
+    # display(f)
     
     preenergies = [p.E for p in prephotons]
     angenergies = [p.E for p in angphotons]
     
-    ax_energyangle = Axis(layout2d[1,1], ylabel="Angle [deg]", xlabel="Energy [eV]", title="Incident photon distribution")
-    ax_transmit = Axis(layout2d[2,1], ylabel="Transmission", xlabel="Energy [eV]", title="Pixelated attenuator transmission")
+    # ax_energyangle = Axis(layout2d[1,1], ylabel="Angle [deg]", xlabel="Energy [eV]", title="Incident photon distribution")
+    # ax_transmit = Axis(layout2d[2,1], ylabel="Transmission", xlabel="Energy [eV]", title="Pixelated attenuator transmission")
     # ax_compare = Axis(layout2d[3,1], ylabel=L"\frac{T(\theta) - T(0)}{T(0)}", xlabel="Energy [eV]", title="Comparative transmission")
     # ax_count = Axis(layout2d[4,1], ylabel="Total photons\nper bin", xlabel="Energy [eV]", title="Bin size")
     # ax_bin = Axis(layout2d[3,1], ylabel="Transmission", xlabel="Energy [eV]", title="Pixelated attenuator transmission")
     
-    scatter!(ax_energyangle, angenergies, angangles, markersize=1, color=:black)
-    scatter!(ax_energyangle, preenergies, preangles, markersize=1, color=:green)
+    # scatter!(ax_energyangle, angenergies, angangles, markersize=1, color=:black)
+    # scatter!(ax_energyangle, preenergies, preangles, markersize=1, color=:green)
     
     # println("Tracing post-optic photons through monolithic attenuator...")
     # basetransmit = batch_photons_through_attenuator(angphotons, mon)
@@ -524,8 +558,8 @@ function main_nphoton()
     println("Tracing post-optic photons through pixelated attenuator...")
     angtransmits = batch_photons_through_attenuator(angphotons, att)
     
-    scatter!(ax_transmit, preenergies, pretransmits, markersize=1, color=:green, label="pre-optic\ntransmission")
-    scatter!(ax_transmit, angenergies, angtransmits, markersize=1, color=:black, label="post-optic\ntransmission")
+    # scatter!(ax_transmit, preenergies, pretransmits, markersize=1, color=:green, label="pre-optic\ntransmission")
+    # scatter!(ax_transmit, angenergies, angtransmits, markersize=1, color=:black, label="post-optic\ntransmission")
     
     savedata = Dict(
         "bins" => Vector(1:0.25:28).*1e3,
@@ -535,7 +569,7 @@ function main_nphoton()
         "postphotons" => angphotons
     )
     
-    save_products("~/Documents/FOXSI/Rays/results/2025/nov10/compare", savedata, do_gsfc_meas=true)
+    save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov11/", savedata, do_gsfc_meas=true)
 end
 
 function get_previous_photon_data(file::String)
@@ -565,6 +599,6 @@ function get_previous_photon_data(file::String)
 end
 
 function just_plot()
-   save_products("~/Documents/FOXSI/Rays/results/2025/nov10/compare","~/Documents/FOXSI/Rays/results/2025/nov10/transmit_data_n1e+07.csv"; do_gsfc_meas=true)
+   save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov11/plot","/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov11/transmit_data_n4e+04.csv"; do_gsfc_meas=true)
     
 end
