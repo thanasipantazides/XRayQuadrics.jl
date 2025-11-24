@@ -1,6 +1,6 @@
 name = "XRayQuadrics"
 uuid = "06f10efd-d23e-4080-b4cc-94b4a1650570"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["thanasipantazides <thanasipantazides@gmail.com> and contributors"]
 
 [deps]
