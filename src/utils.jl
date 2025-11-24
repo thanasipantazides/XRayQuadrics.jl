@@ -102,7 +102,7 @@ function parse_mca(file::String)
     return ret
 end
 
-function interpolateattenuation(E::T, table::Dict{String, Vector{Any}}; level=0) where T<:Real
+function interpolateattenuation(E::T, table::Dict{String, Vector{Any}}; level=0)::T where T<:Real
     if level == 0 && (E >= table["energies"][end] || E < table["energies"][1])
         @error "looking up energy outside bounds!"
         println(E)

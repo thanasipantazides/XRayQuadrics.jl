@@ -1,10 +1,24 @@
 using XRayQuadrics
 
+# struct Particle
+#     r0::Vector{Float64}     # initial position
+#     v::Vector{Float64}      # propagation direction (unit)
+#     E::Float64              # energy
+#     id::Int64               # id number for tracking
+#     Particle(r0,v,E,id) = begin
+#         if length(r0) != 3 || length(v) != 3
+#             error("3-vectors please")
+#         else
+#             new(r0,v/norm(v),E,id)
+#         end
+#     end
+# end
+
 struct Particle
-    r0::Vector{Float64}     # initial position
-    v::Vector{Float64}      # propagation direction (unit)
-    E::Float64              # energy
-    id::Int64               # id number for tracking
+    r0::Vector{Float32}     # initial position
+    v::Vector{Float32}      # propagation direction (unit)
+    E::Float32              # energy
+    id::Int32               # id number for tracking
     Particle(r0,v,E,id) = begin
         if length(r0) != 3 || length(v) != 3
             error("3-vectors please")
@@ -26,8 +40,8 @@ struct PixelatedAttenuator
     holes       # a list of cylinders
     largeradius # largest hole radius in attenuator 
     density     # in kg/m^3
-    toppoint    # a point (x,y,z) on the one side of the attenuator (in m)
-    bottompoint # a point on the other side of the attenuator
+    topplane    # a Plane defining one side of the attenuator (in m)
+    bottomplane # a Plane defining the other side of the attenuator
     normal      # normal vector to attenuator surface    
     massattenuation # table of mass attenuation coefficients per energy
     bbox        # tuple of two 3-vectors defining corners of rectangular prism bounding the attenuator.

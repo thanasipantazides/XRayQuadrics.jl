@@ -5,12 +5,98 @@ import CairoMakie
 using Random
 using ProgressMeter
 import Printf, CSV
+import Profile, PProf
+
+function merge_csv(loadfiles::Vector{String})
+    n = 0
+    offset = 0
+    savepathprefix = "" 
+    for (k,f) in enumerate(loadfiles)
+        n_str_in= split(f, '.')[1]
+        n_str_reg = r"(?<=_n)(.*)"
+        match_o = match(n_str_reg, n_str_in)
+        n_str = split(match_o.match, '_')[1]
+        #mantissa, exponent = split(n_str, 'e')
+        n += parse(Float64, n_str)
+        if k == 1
+            offset = match_o.offset - 2
+            savepathprefix = f[1:offset]
+        end
+    end
+    println("merged data for " * string(n) * " photons")
+    savepath = savepathprefix*"merged_n"*Printf.@sprintf("%.0e", n)*".csv"
+    merge_csv(loadfiles, savepath)
+    return savepath
+end
+
+function merge_csv(loadfiles::Vector{String}, savepath::String)
+    
+    M = zeros(2, 6, length(loadfiles))
+    names = ""
+    for (f,file) in enumerate(loadfiles)
+        data = CSV.File(file, header=true)
+        if f == 1
+            names = [string(name) for name in data.names]
+        end
+        n = length(data)
+        
+        # resize M to fit the new data
+        if n > length(M[:,1,f])
+            P = M
+            M = zeros(n, length(M[1,:,f]), length(M[1,1,:]))
+            M[1:length(P[:,1,f]), :, :] = P
+        end
+        
+        # populate the table M with each source CSV's data. Just stacking the CSVs.
+        for (r,row) in enumerate(data)
+            for (c,col) in enumerate(row)
+                M[r,c,f] = col
+            end
+        end
+    end
+    
+    N = zeros(length(M[:,1,1]), length(M[1,:,1]))
+    # same energy bins as source data
+    N[:,1] = M[:,1,1]
+    N[:,2] = M[:,2,1]
+    for k in eachindex(M[:,1,1])
+        # total count in each energy bin
+        N[k,3] = sum(M[k,3,:]) 
+        N[k,4] = sum(M[k,4,:])
+        
+        # average transmission in each bin
+        N[k,5] = sum(dot(M[k,5,:], M[k,3,:])) / N[k,3]
+        N[k,6] = sum(dot(M[k,6,:], M[k,4,:])) / N[k,4]
+    end
+    
+    println("\nprephotons:\t", sum(N[:,3]))
+    println("postphotons:\t", sum(N[:,4]))
+    
+    csvstr = join(names, ",")
+    # csvstr *= join(N', ",")
+    for k in eachindex(N[:,1])
+        csvstr *= "\n" * join(N[k,:], ",")
+    end
+    write(savepath, csvstr)
+end
+
+function do_merge()
+    merge_csv(
+        [
+            "/home/thanasi/projects/ray/results/2025/nov12/f32/transmit_data_n1e+07_r1.csv",
+            "/home/thanasi/projects/ray/results/2025/nov12/f32/transmit_data_n1e+07_r2.csv",
+            "/home/thanasi/projects/ray/results/2025/nov12/f32/transmit_data_n1e+07_r3.csv",
+            "/home/thanasi/projects/ray/results/2025/nov12/f32/transmit_data_n1e+07_r4.csv",
+        ],
+        "/home/thanasi/projects/ray/results/2025/nov12/f32/foxsi4_pix_atten_merge_sim_transmission.csv"
+    )
+end
 
 function compare_matten(savepath::String)
     matten_nist_f = "src/data/ehsteve_matten.csv"
     matten_lbnl_f = "src/data/LBNL_attenlength_Si.csv"
-    matten_nist_phot_f = "src/data/NIST_XCOM_attenlength.csv"
-    matten_nist_scat_f = "src/data/NIST_XCOM_attenlength_scatter.csv"
+    matten_nist_phot_f = "src/data/NIST_XCOM_attenlength_si.csv"
+    matten_nist_scat_f = "src/data/NIST_XCOM_attenlength_scatter_si.csv"
     matten_nist_t = get_mass_attenuation_data(matten_nist_f)
     matten_lbnl_t = get_mass_attenuation_data(matten_lbnl_f)
     matten_nist_phot_t = get_mass_attenuation_data(matten_nist_phot_f)
@@ -98,11 +184,64 @@ function make_monolithic()
         truncated_cylinders,    # list of features
         max(top_r, bottom_r),   # biggest hole size
         2390.0,                 # density
-        z*(bottom_h + gap + top_h),   # top point
-        [0.0,0.0,0.0],                      # bottom point
+        top_plane,   # top point
+        bottom_plane,                      # bottom point
         z,                      # normal
         # get_mass_attenuation_data("src/data/LBNL_attenlength_Si.csv"),
-        get_mass_attenuation_data("src/data/NIST_XCOM_attenlength_scatter.csv"),
+        get_mass_attenuation_data("src/data/NIST_XCOM_attenlength_scatter_si.csv"),
+        bbox,
+        pitch
+    ) 
+end
+
+function make_monolithic_al()
+    top_r = 10.5e-6
+    bottom_r = 5e-6
+    top_h =     0.127e-3/3
+    bottom_h =  0.127e-3/3
+    gap =       0.127e-3/3
+    pitch = 60e-6
+    nx = 0
+    ny = 0
+    
+    corner1 = [0 - pitch/2, 0 - pitch/2, 0]
+    corner2 = [1*pitch + pitch/2, 1*pitch + pitch/2, bottom_h + gap + top_h]
+    bbox = (corner1, corner2)
+    
+    z = [0;0;1]
+    tang = 0*pi/100000000
+    transform = [1 0 0; 0 cos(tang) -sin(tang); 0 sin(tang) cos(tang)]
+    bottom_plane = Plane(zeros(3), z)
+    bottom_cyl_plane = Plane((bottom_h)*z, z)
+    top_cyl_plane = Plane((bottom_h+gap)*z, z)
+    top_plane = Plane((bottom_h+gap+top_h)*z, z)
+    truncated_cylinders = TruncatedQuadric[]
+    for i in 1:nx
+        for j in 1:ny
+            this_bottom_c = Cylinder(
+                bottom_r,
+                [(i-1)*pitch, (j-1)*pitch, 0],
+                transform*z
+            )
+            this_top_c = Cylinder(
+                top_r,
+                [(i-1)*pitch, (j-1)*pitch, bottom_h + gap],
+                transform*z
+            )
+            push!(truncated_cylinders, TruncatedQuadric(this_bottom_c,  [bottom_plane, bottom_cyl_plane], true))
+            push!(truncated_cylinders, TruncatedQuadric(this_top_c, [top_cyl_plane, top_plane], true))
+        end
+    end
+    
+    return PixelatedAttenuator(
+        truncated_cylinders,    # list of features
+        max(top_r, bottom_r),   # biggest hole size
+        2699.0,                 # density
+        top_plane,
+        bottom_plane,
+        z,                      # normal
+        # get_mass_attenuation_data("src/data/LBNL_attenlength_Al.csv"),
+        get_mass_attenuation_data("src/data/NIST_XCOM_attenlength_scatter_al.csv"),
         bbox,
         pitch
     ) 
@@ -163,29 +302,108 @@ function make_attenuator()
         truncated_cylinders,    # list of features
         max(top_r, bottom_r),   # biggest hole size
         2390.0,                 # density
-        z*(bottom_h + gap + top_h),   # top point
-        [0.0,0.0,0.0],                      # bottom point
+        top_plane,
+        bottom_plane,
         z,                      # normal
         # get_mass_attenuation_data("src/data/LBNL_attenlength_Si.csv"),
-        get_mass_attenuation_data("src/data/NIST_XCOM_attenlength_scatter.csv"),
+        get_mass_attenuation_data("src/data/NIST_XCOM_attenlength_scatter_si.csv"),
         bbox,
         pitch
     ) 
 end
 
-function setup_n_photons(att::PixelatedAttenuator, path::Union{String, Nothing}, n::Int)
+function make_attenuator_with_hole()
+    # define these to instantiate PixelatedAttenuator:
+    #   holes (a list of cylinders)
+    #   largeradius (biggest hole radius, as a length scale)
+    #   density
+    #   toppoint
+    #   bottompoint
+    #   normal
+    #   massattenuation
+
+    top_r = 10.5e-6
+    bottom_r = 5e-6
+    top_h = 120e-6
+    bottom_h = 175e-6
+    gap = 105e-6
+    pitch = 60e-6
+    
+    midpitch = 2
+    nx = 3
+    ny = 3
+    
+    corner1 = [0 - pitch/2, 0 - pitch/2, 0]
+    corner2 = [(nx - 1)*pitch + pitch/2, (ny - 1)*pitch + pitch/2, bottom_h + gap + top_h]
+    bbox = (corner1, corner2)
+    
+    # The inner tracing.jl functions need to be adapted to handle TruncatedQuadrics.
+    # But first just construct the attenuator and plot it for sanity check.
+    
+    z = [0;0;1]
+    tang = 0*pi/100000000
+    transform = [1 0 0; 0 cos(tang) -sin(tang); 0 sin(tang) cos(tang)]
+    bottom_plane = Plane(zeros(3), z)
+    bottom_cyl_plane = Plane((bottom_h)*z, z)
+    top_cyl_plane = Plane((bottom_h+gap)*z, z)
+    top_plane = Plane((bottom_h+gap+top_h)*z, z)
+    truncated_cylinders = []
+    for i in 1:nx
+        for j in 1:ny
+            if i == midpitch && j == midpitch # if we are the middle(-ish) of the attenuator,
+                # add a cylinder straight through the whole thing.
+                this_c = Cylinder(
+                    max(bottom_r, top_r),
+                    [(i-1)*pitch, (j-1)*pitch, 0],
+                    transform*z
+                )
+                push!(truncated_cylinders, TruncatedQuadric(this_c,  [bottom_plane, top_plane], true))
+                continue
+            end
+            this_bottom_c = Cylinder(
+                bottom_r,
+                [(i-1)*pitch, (j-1)*pitch, 0],
+                transform*z
+            )
+            this_top_c = Cylinder(
+                top_r,
+                [(i-1)*pitch, (j-1)*pitch, bottom_h + gap],
+                transform*z
+            )
+            push!(truncated_cylinders, TruncatedQuadric(this_bottom_c,  [bottom_plane, bottom_cyl_plane], true))
+            push!(truncated_cylinders, TruncatedQuadric(this_top_c, [top_cyl_plane, top_plane], true))
+        end
+    end
+    
+    return PixelatedAttenuator(
+        truncated_cylinders,    # list of features
+        max(top_r, bottom_r),   # biggest hole size
+        2390.0,                 # density
+        top_plane,
+        bottom_plane,
+        z,                      # normal
+        # get_mass_attenuation_data("src/data/LBNL_attenlength_Si.csv"),
+        get_mass_attenuation_data("src/data/NIST_XCOM_attenlength_scatter_si.csv"),
+        bbox,
+        pitch
+    ) 
+end
+
+function setup_n_photons(att::PixelatedAttenuator, path::Union{String, Nothing}, n::Int; transform::AbstractMatrix=I(3), hires=false)
     # the photons should be populated over a unit cell of the pixelated attenuator---any 60 µm x 60 µm region. 
     # Then they should be traced back along their negative velocity direction to starting points (so they don't start inside the volume).
     # This way we have full angular coverage and a uniform sampling for the attenuator.
     
-    angles = []
-    if isnothing(path)
-        angles = zeros(n)
-    else
+    angles = zeros(n)
+    if !isnothing(path)
         d = get_photon_data(path)
         angles = d["angles"]
-        println("Source photon angles [deg]: ", sum(angles)/length(angles))
     end
+    
+    if hires
+        angles = angles[((angles .> 0.9) .& (angles .< 0.95)) .| ((angles .> 1.02) .& (angles .< 1.07))]
+    end
+    println("Source photon angles [deg]: ", sum(angles)/length(angles))
     
     # Shuffle the incident photons, so their is no correlation between their spatial arrangement and the original list order.
     # randi = randperm(length(angles))
@@ -193,11 +411,14 @@ function setup_n_photons(att::PixelatedAttenuator, path::Union{String, Nothing},
      
     npitch = 1
     midatten = (att.bbox[1] .+ att.bbox[2]) ./ 2
-    midatten[3] = att.toppoint[3]
+    midatten[3] = att.topplane.c[3]
     
-    out_energies = []
-    out_angles = []
-    photons = Particle[]
+    out_energies = zeros(n)
+    out_angles = zeros(n)
+    photons = Vector{Particle}(undef, n)
+    # out_energies = []
+    # out_angles = []
+    # photons = Particle[]
     @showprogress desc = "setting up photons...\t" for i in 1:n
         # energy = rand()*28e3 + 1e3 # random energy from 1 keV to 29 keV.
         energy = rand()*28e3 + 1e3 # random energy from 1 keV to 11 keV.
@@ -212,7 +433,7 @@ function setup_n_photons(att::PixelatedAttenuator, path::Union{String, Nothing},
                   0  cos(anga) -sin(anga);
                   0  sin(anga) cos(anga)]
         # v = euler3*[0, sin(angles[i]*pi/180), -cos(angles[i]*pi/180)]
-        v = euler3*euler1*(-z)
+        v = transform*euler3*euler1*(-z)
         v = v/norm(v)
         r = Point3f([rand(), rand(), 0].*att.pitch*npitch .+ midatten .- [npitch*att.pitch/2, npitch*att.pitch/2, 0])
         photon = Particle(
@@ -221,11 +442,67 @@ function setup_n_photons(att::PixelatedAttenuator, path::Union{String, Nothing},
             energy,
             i
         )
-        push!(photons, photon)
-        push!(out_energies, energy)
-        push!(out_angles, anga*180/pi)
+        photons[i] = photon
+        out_energies[i] = energy
+        out_angles[i] = anga*180/pi
     end
     return photons, out_energies, out_angles
+end
+
+function setup_n_photons!(photons::Vector{Particle}, out_energies::Vector{<:Real}, out_angles::Vector{<:Real}, att::PixelatedAttenuator, path::Union{String, Nothing}, n::Int; transform::AbstractMatrix=I(3), hires=false)
+    # the photons should be populated over a unit cell of the pixelated attenuator---any 60 µm x 60 µm region. 
+    # Then they should be traced back along their negative velocity direction to starting points (so they don't start inside the volume).
+    # This way we have full angular coverage and a uniform sampling for the attenuator.
+    
+    angles = zeros(n)
+    if !isnothing(path)
+        d = get_photon_data(path)
+        angles = d["angles"]
+    end
+    
+    if hires
+        angles = angles[((angles .> 0.9) .& (angles .< 0.95)) .| ((angles .> 1.02) .& (angles .< 1.07))]
+    end
+    println("Source photon angles [deg]: ", sum(angles)/length(angles))
+    
+    # Shuffle the incident photons, so their is no correlation between their spatial arrangement and the original list order.
+    # randi = randperm(length(angles))
+    # angles = angles[randi]
+     
+    npitch = 1
+    midatten = (att.bbox[1] .+ att.bbox[2]) ./ 2
+    midatten[3] = att.topplane.c[3]
+    
+    # out_energies = []
+    # out_angles = []
+    # photons = Particle[]
+    @showprogress desc = "setting up photons...\t" for i in 1:n
+        # energy = rand()*28e3 + 1e3 # random energy from 1 keV to 29 keV.
+        energy = rand()*28e3 + 1e3 # random energy from 1 keV to 11 keV.
+        z = [0,0,1]
+        anga = rand(angles)*pi/180
+        angc = rand()*2*pi
+        
+        euler3 = [cos(angc) -sin(angc) 0;
+                  sin(angc) cos(angc) 0;
+                  0  0         1]
+        euler1 = [1  0         0;
+                  0  cos(anga) -sin(anga);
+                  0  sin(anga) cos(anga)]
+        # v = euler3*[0, sin(angles[i]*pi/180), -cos(angles[i]*pi/180)]
+        v = transform*euler3*euler1*(-z)
+        v = v/norm(v)
+        r = Point3f([rand(), rand(), 0].*att.pitch*npitch .+ midatten .- [npitch*att.pitch/2, npitch*att.pitch/2, 0])
+        photon = Particle(
+            r - 600e-6*v,
+            v,
+            energy,
+            i
+        )
+        photons[i] = photon
+        out_energies[i] = energy
+        out_angles[i] = anga*180/pi
+    end
 end
 
 function plot_attenuator!(ax::GLMakie.LScene, attenuator::PixelatedAttenuator)
@@ -255,7 +532,7 @@ function plot_attenuator!(ax::GLMakie.LScene, attenuator::PixelatedAttenuator)
     lines!(ax, perm_border, color=:black)
 end
 
-function save_products(path::String, data::Dict{String, Vector}; do_gsfc_meas=false)
+function save_products(path::String, data::Dict{String, Vector}; do_gsfc_meas=false, index=nothing)
     CairoMakie.activate!()
     fig = CairoMakie.Figure(size=(600, 600), backgroundcolor=:transparent)
     
@@ -364,8 +641,16 @@ function save_products(path::String, data::Dict{String, Vector}; do_gsfc_meas=fa
     xlims!(ax_each, [1, 29] .* 1e0)
     ylims!(ax_each, [-0.05, 1.1])
     
-    write(joinpath(path, "transmit_data_n" * n_str * ".csv"), csvdata)
-    save(joinpath(path, "diff_transmit_n" * n_str * ".pdf"), fig)
+    fname_index = ""
+    if !isnothing(index)
+        fname_index = "_r"*string(index)
+    end
+    
+    csvfname = joinpath(path, "transmit_data_n" * n_str * fname_index * ".csv")
+    write(csvfname, csvdata)
+    save(joinpath(path, "diff_transmit_n" * n_str * fname_index * ".pdf"), fig)
+    
+    return csvfname
 end
 
 function save_products(path::String, source_data::String; do_gsfc_meas=false)
@@ -517,27 +802,32 @@ function main_nphoton()
     
     mon = make_monolithic()
     att = make_attenuator()
-    println("thickness: ", norm(att.toppoint - att.bottompoint))
+    println("thickness: ", att.topplane.a'*(att.topplane.c - att.bottomplane.c))
     n = Int(1e5)
-    angphotons, angenergies, angangles = setup_n_photons(att, "src/data/milo_input.csv", n)
+
+    # if we want to tip all photons off-axis:
+    tang = 10*pi/180
+    offax_transform = [1 0 0; 0 cos(tang) -sin(tang); 0 sin(tang) cos(tang)]
+    
+    angphotons, angenergies, angangles = setup_n_photons(att, "src/data/milo_input.csv", n; transform=offax_transform)
     prephotons, preenergies, preangles = setup_n_photons(att, nothing, n)
     println("Mean angle [deg]: ", sum(angangles)/length(angangles))
     
-    # GLMakie.activate!()
-    # f = GLMakie.Figure(size=(900, 600))
-    # layout3d = GLMakie.GridLayout(f[1,1])
-    # layout2d = GLMakie.GridLayout(f[1,2])
-    # scene = GLMakie.LScene(
-    #     layout3d[1,1],
-    #     show_axis=false
-    # )
+    GLMakie.activate!()
+    f = GLMakie.Figure(size=(900, 600))
+    layout3d = GLMakie.GridLayout(f[1,1])
+    layout2d = GLMakie.GridLayout(f[1,2])
+    scene = GLMakie.LScene(
+        layout3d[1,1],
+        show_axis=false
+    )
     
-    # plot_attenuator!(scene, att)
-    # XRayQuadrics.plot!(scene, angphotons, length_scale=1200e-6)
+    plot_attenuator!(scene, att)
+    XRayQuadrics.plot!(scene, angphotons, length_scale=1200e-6)
     # XRayQuadrics.plot!(scene, badphotons, length_scale=1200e-6)
     # XRayQuadrics.plot!(scene, parphotons, length_scale=1200e-6)
     
-    # display(f)
+    display(f)
     
     preenergies = [p.E for p in prephotons]
     angenergies = [p.E for p in angphotons]
@@ -562,14 +852,73 @@ function main_nphoton()
     # scatter!(ax_transmit, angenergies, angtransmits, markersize=1, color=:black, label="post-optic\ntransmission")
     
     savedata = Dict(
-        "bins" => Vector(1:0.25:28).*1e3,
+        "bins" => Vector(1:0.25:29).*1e3,
         "pretransmits" => pretransmits,
         "posttransmits" => angtransmits,
         "prephotons" => prephotons,
         "postphotons" => angphotons
     )
     
-    save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov11/", savedata, do_gsfc_meas=true)
+    save_products("/home/thanasi/projects/ray/results/2025/nov12/f32", savedata, do_gsfc_meas=true)
+end
+
+
+function batch_random_photons(savepath::String, nphoton::Int, nrep::Int)
+    # mon = make_monolithic()
+    # att = make_monolithic()
+    # att = make_monolithic_al()
+    att = make_attenuator()
+    # att = make_attenuator_with_hole()
+    println("thickness: ", att.topplane.a'*(att.topplane.c - att.bottomplane.c))
+    n = nphoton
+    
+    # if we want to tip all photons off-axis:
+    tang = 0*pi/180
+    offax_transform = [1 0 0; 0 cos(tang) -sin(tang); 0 sin(tang) cos(tang)]
+    
+    csvnames = String[]
+    angphotons = Vector{Particle}(undef, n)
+    prephotons = Vector{Particle}(undef, n)
+    angenergies = zeros(n)
+    preenergies = zeros(n)
+    angangles = zeros(n)
+    preangles = zeros(n)
+    angtransmits = zeros(n)
+    pretransmits = zeros(n)
+    savedata = Dict(
+        "bins" => Vector(1:0.25:29).*1e3,
+        "pretransmits" => pretransmits,
+        "posttransmits" => angtransmits,
+        "prephotons" => prephotons,
+        "postphotons" => angphotons
+    )
+    for k in 1:nrep
+        setup_n_photons!(angphotons, angenergies, angangles, att, "src/data/milo_input.csv", n; transform=offax_transform, hires=true)
+        setup_n_photons!(prephotons, preenergies, preangles, att, nothing, n)
+        
+        # preenergies = [p.E for p in prephotons]
+        # angenergies = [p.E for p in angphotons]
+        
+        println("Tracing parallel photons through pixelated attenuator...")
+        pretransmits = batch_photons_through_attenuator(prephotons, att)
+        println("Tracing post-optic photons through pixelated attenuator...")
+        angtransmits = batch_photons_through_attenuator(angphotons, att)
+        
+        println("Saving...")
+        savedata["pretransmits"] = pretransmits
+        savedata["posttransmits"] = angtransmits
+        savedata["prephotons"] = prephotons
+        savedata["postphotons"] = angphotons
+        
+        fname = save_products(savepath, savedata; do_gsfc_meas=true, index=k)
+        push!(csvnames, fname)
+    end
+    # println(csvnames)
+    mergefile = merge_csv(csvnames)
+    
+    save_products(savepath, mergefile; do_gsfc_meas=true)
+    
+    GC.gc()
 end
 
 function get_previous_photon_data(file::String)
@@ -599,6 +948,9 @@ function get_previous_photon_data(file::String)
 end
 
 function just_plot()
-   save_products("/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov11/plot","/Users/thanasi/Documents/FOXSI/Rays/results/2025/nov11/transmit_data_n4e+04.csv"; do_gsfc_meas=true)
+   save_products("/home/thanasi/projects/ray/results/2025/nov14/pix/lbnl/","/home/thanasi/projects/ray/results/2025/nov14/pix/lbnl/transmit_data_merged_n4e+07.csv"; do_gsfc_meas=true)
     
 end
+
+#batch_random_photons("/home/thanasi/projects/ray/results/2025/nov14/pix/nist/nagoya/trial", Int(1e4), 3)
+
